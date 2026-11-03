@@ -1,0 +1,901 @@
+{
+  "floor": {
+    "path": "res://assets/render_cache/floor.png",
+    "x": 70,
+    "y": 62,
+    "w": 2772,
+    "h": 1389
+  },
+  "bands": [
+    {
+      "path": "res://assets/render_cache/walls/d00.png",
+      "diag": 0,
+      "x": 1174,
+      "y": 16,
+      "w": 72,
+      "h": 85,
+      "z": 80.36,
+      "count": 1
+    },
+    {
+      "path": "res://assets/render_cache/walls/d01.png",
+      "diag": 1,
+      "x": 1143,
+      "y": 31,
+      "w": 134,
+      "h": 86,
+      "z": 95.72,
+      "count": 2
+    },
+    {
+      "path": "res://assets/render_cache/walls/d02.png",
+      "diag": 2,
+      "x": 1112,
+      "y": 46,
+      "w": 196,
+      "h": 86,
+      "z": 111.08,
+      "count": 3
+    },
+    {
+      "path": "res://assets/render_cache/walls/d03.png",
+      "diag": 3,
+      "x": 1082,
+      "y": 62,
+      "w": 256,
+      "h": 85,
+      "z": 126.44,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d04.png",
+      "diag": 4,
+      "x": 1051,
+      "y": 77,
+      "w": 318,
+      "h": 86,
+      "z": 141.8,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d05.png",
+      "diag": 5,
+      "x": 1020,
+      "y": 92,
+      "w": 380,
+      "h": 86,
+      "z": 157.16,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d06.png",
+      "diag": 6,
+      "x": 989,
+      "y": 108,
+      "w": 442,
+      "h": 85,
+      "z": 172.51999999999998,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d07.png",
+      "diag": 7,
+      "x": 959,
+      "y": 123,
+      "w": 502,
+      "h": 86,
+      "z": 187.88,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d08.png",
+      "diag": 8,
+      "x": 928,
+      "y": 138,
+      "w": 564,
+      "h": 86,
+      "z": 203.24,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d09.png",
+      "diag": 9,
+      "x": 897,
+      "y": 154,
+      "w": 626,
+      "h": 85,
+      "z": 218.6,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d10.png",
+      "diag": 10,
+      "x": 867,
+      "y": 169,
+      "w": 686,
+      "h": 86,
+      "z": 233.95999999999998,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d11.png",
+      "diag": 11,
+      "x": 836,
+      "y": 184,
+      "w": 748,
+      "h": 86,
+      "z": 249.32,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d12.png",
+      "diag": 12,
+      "x": 805,
+      "y": 200,
+      "w": 810,
+      "h": 86,
+      "z": 264.68,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d13.png",
+      "diag": 13,
+      "x": 774,
+      "y": 215,
+      "w": 872,
+      "h": 86,
+      "z": 280.03999999999996,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d14.png",
+      "diag": 14,
+      "x": 744,
+      "y": 231,
+      "w": 932,
+      "h": 85,
+      "z": 295.4,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d15.png",
+      "diag": 15,
+      "x": 713,
+      "y": 246,
+      "w": 994,
+      "h": 86,
+      "z": 310.76,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d16.png",
+      "diag": 16,
+      "x": 682,
+      "y": 261,
+      "w": 1056,
+      "h": 86,
+      "z": 326.12,
+      "count": 5
+    },
+    {
+      "path": "res://assets/render_cache/walls/d17.png",
+      "diag": 17,
+      "x": 652,
+      "y": 277,
+      "w": 1116,
+      "h": 85,
+      "z": 341.48,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d18.png",
+      "diag": 18,
+      "x": 621,
+      "y": 292,
+      "w": 1178,
+      "h": 86,
+      "z": 356.84,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d19.png",
+      "diag": 19,
+      "x": 590,
+      "y": 307,
+      "w": 1240,
+      "h": 86,
+      "z": 372.2,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d20.png",
+      "diag": 20,
+      "x": 559,
+      "y": 323,
+      "w": 1302,
+      "h": 85,
+      "z": 387.56,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d21.png",
+      "diag": 21,
+      "x": 529,
+      "y": 338,
+      "w": 1362,
+      "h": 86,
+      "z": 402.91999999999996,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d22.png",
+      "diag": 22,
+      "x": 498,
+      "y": 353,
+      "w": 1424,
+      "h": 86,
+      "z": 418.28,
+      "count": 10
+    },
+    {
+      "path": "res://assets/render_cache/walls/d23.png",
+      "diag": 23,
+      "x": 467,
+      "y": 369,
+      "w": 1486,
+      "h": 85,
+      "z": 433.64,
+      "count": 11
+    },
+    {
+      "path": "res://assets/render_cache/walls/d24.png",
+      "diag": 24,
+      "x": 437,
+      "y": 384,
+      "w": 1546,
+      "h": 86,
+      "z": 449.0,
+      "count": 12
+    },
+    {
+      "path": "res://assets/render_cache/walls/d25.png",
+      "diag": 25,
+      "x": 406,
+      "y": 400,
+      "w": 1608,
+      "h": 85,
+      "z": 464.36,
+      "count": 11
+    },
+    {
+      "path": "res://assets/render_cache/walls/d26.png",
+      "diag": 26,
+      "x": 375,
+      "y": 415,
+      "w": 1670,
+      "h": 86,
+      "z": 479.71999999999997,
+      "count": 10
+    },
+    {
+      "path": "res://assets/render_cache/walls/d27.png",
+      "diag": 27,
+      "x": 344,
+      "y": 430,
+      "w": 1732,
+      "h": 86,
+      "z": 495.08,
+      "count": 11
+    },
+    {
+      "path": "res://assets/render_cache/walls/d28.png",
+      "diag": 28,
+      "x": 314,
+      "y": 446,
+      "w": 1792,
+      "h": 85,
+      "z": 510.44,
+      "count": 12
+    },
+    {
+      "path": "res://assets/render_cache/walls/d29.png",
+      "diag": 29,
+      "x": 283,
+      "y": 461,
+      "w": 1854,
+      "h": 86,
+      "z": 525.8,
+      "count": 13
+    },
+    {
+      "path": "res://assets/render_cache/walls/d30.png",
+      "diag": 30,
+      "x": 252,
+      "y": 476,
+      "w": 1916,
+      "h": 86,
+      "z": 541.16,
+      "count": 14
+    },
+    {
+      "path": "res://assets/render_cache/walls/d31.png",
+      "diag": 31,
+      "x": 221,
+      "y": 492,
+      "w": 1978,
+      "h": 85,
+      "z": 556.52,
+      "count": 15
+    },
+    {
+      "path": "res://assets/render_cache/walls/d32.png",
+      "diag": 32,
+      "x": 191,
+      "y": 507,
+      "w": 2038,
+      "h": 86,
+      "z": 571.88,
+      "count": 15
+    },
+    {
+      "path": "res://assets/render_cache/walls/d33.png",
+      "diag": 33,
+      "x": 160,
+      "y": 522,
+      "w": 2100,
+      "h": 86,
+      "z": 587.24,
+      "count": 14
+    },
+    {
+      "path": "res://assets/render_cache/walls/d34.png",
+      "diag": 34,
+      "x": 129,
+      "y": 538,
+      "w": 2162,
+      "h": 85,
+      "z": 602.6,
+      "count": 12
+    },
+    {
+      "path": "res://assets/render_cache/walls/d35.png",
+      "diag": 35,
+      "x": 99,
+      "y": 553,
+      "w": 2222,
+      "h": 86,
+      "z": 617.96,
+      "count": 12
+    },
+    {
+      "path": "res://assets/render_cache/walls/d36.png",
+      "diag": 36,
+      "x": 68,
+      "y": 568,
+      "w": 2284,
+      "h": 86,
+      "z": 633.3199999999999,
+      "count": 13
+    },
+    {
+      "path": "res://assets/render_cache/walls/d37.png",
+      "diag": 37,
+      "x": 99,
+      "y": 584,
+      "w": 2284,
+      "h": 86,
+      "z": 648.68,
+      "count": 12
+    },
+    {
+      "path": "res://assets/render_cache/walls/d38.png",
+      "diag": 38,
+      "x": 129,
+      "y": 599,
+      "w": 2285,
+      "h": 86,
+      "z": 664.04,
+      "count": 11
+    },
+    {
+      "path": "res://assets/render_cache/walls/d39.png",
+      "diag": 39,
+      "x": 160,
+      "y": 615,
+      "w": 2284,
+      "h": 85,
+      "z": 679.4,
+      "count": 10
+    },
+    {
+      "path": "res://assets/render_cache/walls/d40.png",
+      "diag": 40,
+      "x": 191,
+      "y": 630,
+      "w": 2284,
+      "h": 86,
+      "z": 694.76,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d41.png",
+      "diag": 41,
+      "x": 221,
+      "y": 645,
+      "w": 2285,
+      "h": 86,
+      "z": 710.12,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d42.png",
+      "diag": 42,
+      "x": 252,
+      "y": 661,
+      "w": 2284,
+      "h": 85,
+      "z": 725.48,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d43.png",
+      "diag": 43,
+      "x": 283,
+      "y": 676,
+      "w": 2284,
+      "h": 86,
+      "z": 740.8399999999999,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d44.png",
+      "diag": 44,
+      "x": 314,
+      "y": 691,
+      "w": 2284,
+      "h": 86,
+      "z": 756.1999999999999,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d45.png",
+      "diag": 45,
+      "x": 344,
+      "y": 707,
+      "w": 2285,
+      "h": 85,
+      "z": 771.56,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d46.png",
+      "diag": 46,
+      "x": 375,
+      "y": 722,
+      "w": 2284,
+      "h": 86,
+      "z": 786.92,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d47.png",
+      "diag": 47,
+      "x": 406,
+      "y": 737,
+      "w": 2284,
+      "h": 86,
+      "z": 802.28,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d48.png",
+      "diag": 48,
+      "x": 437,
+      "y": 753,
+      "w": 2284,
+      "h": 85,
+      "z": 817.64,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d49.png",
+      "diag": 49,
+      "x": 467,
+      "y": 768,
+      "w": 2284,
+      "h": 86,
+      "z": 833.0,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d50.png",
+      "diag": 50,
+      "x": 498,
+      "y": 784,
+      "w": 2284,
+      "h": 85,
+      "z": 848.36,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d51.png",
+      "diag": 51,
+      "x": 529,
+      "y": 799,
+      "w": 2284,
+      "h": 86,
+      "z": 863.72,
+      "count": 10
+    },
+    {
+      "path": "res://assets/render_cache/walls/d52.png",
+      "diag": 52,
+      "x": 559,
+      "y": 814,
+      "w": 2285,
+      "h": 86,
+      "z": 879.0799999999999,
+      "count": 10
+    },
+    {
+      "path": "res://assets/render_cache/walls/d53.png",
+      "diag": 53,
+      "x": 590,
+      "y": 830,
+      "w": 2223,
+      "h": 85,
+      "z": 894.4399999999999,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d54.png",
+      "diag": 54,
+      "x": 621,
+      "y": 845,
+      "w": 2161,
+      "h": 86,
+      "z": 909.8,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d55.png",
+      "diag": 55,
+      "x": 652,
+      "y": 860,
+      "w": 2099,
+      "h": 86,
+      "z": 925.16,
+      "count": 9
+    },
+    {
+      "path": "res://assets/render_cache/walls/d56.png",
+      "diag": 56,
+      "x": 682,
+      "y": 876,
+      "w": 2039,
+      "h": 85,
+      "z": 940.52,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d57.png",
+      "diag": 57,
+      "x": 713,
+      "y": 891,
+      "w": 1977,
+      "h": 86,
+      "z": 955.88,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d58.png",
+      "diag": 58,
+      "x": 744,
+      "y": 906,
+      "w": 1915,
+      "h": 86,
+      "z": 971.24,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d59.png",
+      "diag": 59,
+      "x": 774,
+      "y": 922,
+      "w": 1855,
+      "h": 85,
+      "z": 986.5999999999999,
+      "count": 5
+    },
+    {
+      "path": "res://assets/render_cache/walls/d60.png",
+      "diag": 60,
+      "x": 805,
+      "y": 937,
+      "w": 1793,
+      "h": 86,
+      "z": 1001.9599999999999,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d61.png",
+      "diag": 61,
+      "x": 836,
+      "y": 952,
+      "w": 1731,
+      "h": 86,
+      "z": 1017.3199999999999,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d62.png",
+      "diag": 62,
+      "x": 867,
+      "y": 968,
+      "w": 1669,
+      "h": 86,
+      "z": 1032.6799999999998,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d63.png",
+      "diag": 63,
+      "x": 897,
+      "y": 983,
+      "w": 1609,
+      "h": 86,
+      "z": 1048.04,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d64.png",
+      "diag": 64,
+      "x": 928,
+      "y": 999,
+      "w": 1547,
+      "h": 85,
+      "z": 1063.4,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d65.png",
+      "diag": 65,
+      "x": 959,
+      "y": 1014,
+      "w": 1485,
+      "h": 86,
+      "z": 1078.76,
+      "count": 8
+    },
+    {
+      "path": "res://assets/render_cache/walls/d66.png",
+      "diag": 66,
+      "x": 989,
+      "y": 1029,
+      "w": 1425,
+      "h": 86,
+      "z": 1094.12,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d67.png",
+      "diag": 67,
+      "x": 1020,
+      "y": 1045,
+      "w": 1363,
+      "h": 85,
+      "z": 1109.48,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d68.png",
+      "diag": 68,
+      "x": 1051,
+      "y": 1060,
+      "w": 1301,
+      "h": 86,
+      "z": 1124.84,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d69.png",
+      "diag": 69,
+      "x": 1082,
+      "y": 1075,
+      "w": 1239,
+      "h": 86,
+      "z": 1140.2,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d70.png",
+      "diag": 70,
+      "x": 1112,
+      "y": 1091,
+      "w": 1179,
+      "h": 85,
+      "z": 1155.56,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d71.png",
+      "diag": 71,
+      "x": 1143,
+      "y": 1106,
+      "w": 1117,
+      "h": 86,
+      "z": 1170.92,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d72.png",
+      "diag": 72,
+      "x": 1174,
+      "y": 1121,
+      "w": 1055,
+      "h": 86,
+      "z": 1186.28,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d73.png",
+      "diag": 73,
+      "x": 1205,
+      "y": 1137,
+      "w": 994,
+      "h": 85,
+      "z": 1201.6399999999999,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d74.png",
+      "diag": 74,
+      "x": 1235,
+      "y": 1152,
+      "w": 933,
+      "h": 86,
+      "z": 1217.0,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d75.png",
+      "diag": 75,
+      "x": 1266,
+      "y": 1168,
+      "w": 871,
+      "h": 85,
+      "z": 1232.36,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d76.png",
+      "diag": 76,
+      "x": 1297,
+      "y": 1183,
+      "w": 809,
+      "h": 86,
+      "z": 1247.72,
+      "count": 7
+    },
+    {
+      "path": "res://assets/render_cache/walls/d77.png",
+      "diag": 77,
+      "x": 1327,
+      "y": 1198,
+      "w": 749,
+      "h": 86,
+      "z": 1263.08,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d78.png",
+      "diag": 78,
+      "x": 1358,
+      "y": 1214,
+      "w": 687,
+      "h": 85,
+      "z": 1278.44,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d79.png",
+      "diag": 79,
+      "x": 1389,
+      "y": 1229,
+      "w": 625,
+      "h": 86,
+      "z": 1293.8,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d80.png",
+      "diag": 80,
+      "x": 1420,
+      "y": 1244,
+      "w": 563,
+      "h": 86,
+      "z": 1309.1599999999999,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d81.png",
+      "diag": 81,
+      "x": 1450,
+      "y": 1260,
+      "w": 503,
+      "h": 85,
+      "z": 1324.52,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d82.png",
+      "diag": 82,
+      "x": 1481,
+      "y": 1275,
+      "w": 441,
+      "h": 86,
+      "z": 1339.8799999999999,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d83.png",
+      "diag": 83,
+      "x": 1512,
+      "y": 1290,
+      "w": 379,
+      "h": 86,
+      "z": 1355.24,
+      "count": 6
+    },
+    {
+      "path": "res://assets/render_cache/walls/d84.png",
+      "diag": 84,
+      "x": 1542,
+      "y": 1306,
+      "w": 319,
+      "h": 85,
+      "z": 1370.6,
+      "count": 5
+    },
+    {
+      "path": "res://assets/render_cache/walls/d85.png",
+      "diag": 85,
+      "x": 1573,
+      "y": 1321,
+      "w": 257,
+      "h": 86,
+      "z": 1385.96,
+      "count": 4
+    },
+    {
+      "path": "res://assets/render_cache/walls/d86.png",
+      "diag": 86,
+      "x": 1604,
+      "y": 1336,
+      "w": 195,
+      "h": 86,
+      "z": 1401.32,
+      "count": 3
+    },
+    {
+      "path": "res://assets/render_cache/walls/d87.png",
+      "diag": 87,
+      "x": 1635,
+      "y": 1352,
+      "w": 133,
+      "h": 86,
+      "z": 1416.6799999999998,
+      "count": 2
+    },
+    {
+      "path": "res://assets/render_cache/walls/d88.png",
+      "diag": 88,
+      "x": 1665,
+      "y": 1367,
+      "w": 73,
+      "h": 86,
+      "z": 1432.04,
+      "count": 1
+    }
+  ]
+}

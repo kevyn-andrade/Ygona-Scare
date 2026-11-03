@@ -1,0 +1,33 @@
+# Godot 4.x
+.godot/
+.import/
+
+# Arquivos temporarios
+*.tmp
+*.temp
+*.log
+*~
+
+# Credenciais de exportacao
+export_credentials.cfg
+
+# Python (geracao do cenario)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+.Trash-*/
+
+# Backups
+*.bak
+*.backup

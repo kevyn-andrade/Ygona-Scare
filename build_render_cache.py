@@ -40,6 +40,9 @@ for r in [(17,8,3,4),(33,8,3,4),(17,24,3,4),(33,24,3,4),(23,27,8,3),(9,14,3,5),(
     carve(*r)
 for r in [(6,10,9,False),(46,5,6,True),(6,25,3,True),(47,26,4,False)]:
     wall_line(*r)
+# Parede que fecha o vestibulo; a porta (26,27) e piso e fechada dinamicamente.
+wall_line(19,27,15,True)
+cells[27][26]=0
 
 def project(p):
     x,y=p

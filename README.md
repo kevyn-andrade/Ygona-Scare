@@ -42,7 +42,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 4. **Vestíbulo** — retorne ao altar central, pressione E e sobreviva durante os 15 segundos do ritual.
 5. Alcance a porta principal para ganhar.
 
-As passagens roxas (Costuras Espectrais) podem ser atravessadas com E enquanto a lanterna está em modo espectral. Quando a carga estiver abaixo de 45%, ela pode ser recuperada desligando a lanterna (até 45%) ou recolhendo pilhas. Guardar a lanterna com carga superior a 45% não reduz a energia.
+As passagens roxas (Costuras Espectrais) podem ser atravessadas com E enquanto a lanterna está em modo espectral. Com a lanterna guardada, a carga se recupera sozinha só até 30%; acima disso, só com pilhas.
 
 ## Arquivos
 
@@ -102,3 +102,34 @@ Outras melhorias: movimento dos personagens interpolado entre passos de física 
 - Para verificar FPS, pressione **F3** durante a partida. Faça a comparação com a versão anterior no mesmo computador e com a mesma janela.
 - O arquivo `tests/smoke_test.gd` passou a testar a presença do cache, o estado guardado da lanterna e a preservação da bateria, além da geometria e caminhos.
 - **Limitação dos testes:** foi possível verificar estaticamente todos os assets e scripts, mas este ambiente não dispõe do binário Godot para uma execução gráfica ou para medir FPS real. É necessário abrir no Godot 4.7.2 e confirmar visualmente o resultado.
+
+---
+
+## Atualização GDD — 10/11/2026
+
+Implementação dos itens do GDD que faltavam no protótipo. Todos os valores de design ficam em `scripts/game_config.gd`.
+
+| GDD | O que mudou |
+|---|---|
+| 3.2 Visão limitada | Fora do cone da lanterna a tela fica escura (`DARKNESS`). A luz respeita paredes; a protagonista enxerga só um pequeno halo ao redor de si. |
+| 3.3 Entidade | Jumpscare (imagem + áudio) no game over. Risada ao iniciar a perseguição. Olhos visíveis no escuro quando ela está muito perto. |
+| 3.3 Habilidades | 1 fragmento: ela faz a lanterna **falhar** por instantes (a risada avisa antes). 2 fragmentos: **teletransporte curto** fora da luz. Ambas configuráveis/desligáveis. |
+| 3.4 Bateria | Alcance **e abertura** do cone encolhem abaixo de 60% de carga. A recarga com a lanterna guardada agora vai só até 30%. |
+| 3.5 Luz especial | A luz espectral (F) só é liberada ao pegar a **lente** no salão, depois do básico. |
+| 3.6 Fragmentos | Pulsam de tempos em tempos, visíveis no escuro (fora da tela, um clarão na borda aponta a direção). Pulsos mais fortes e frequentes com a entidade perto. |
+| 2.3 / 3.7 Abertura | Animação inicial (chegada de carro, vislumbre, fragmentos), vestíbulo **trancado e ainda iluminado**, carta da maldição, bilhete, chave sob o vaso, vultos, e **queda de luz** ao abrir a porta. A entidade só desperta alguns segundos depois, anunciada pela risada. |
+| 5.2 Áudio | Camada ambiente mais alta e acelerada a cada fragmento; efeitos não se cortam mais. |
+
+### Arquivos novos
+
+```
+scripts/game_config.gd     # parâmetros de design ([A DEFINIR] / [SUGESTÃO] do GDD)
+scripts/draw_layer.gd      # camada de desenho (mundo e máscara de luz)
+shaders/darkness.gdshader  # escuridão recortada pela máscara de luz
+tools/build_audio.py       # sintetiza laugh.wav, jumpscare.wav, blackout.wav
+tests/visual_check.gd      # captura telas de vários momentos para revisão
+```
+
+- **Áudio da entidade:** `assets/audio/laugh.wav` e `jumpscare.wav` são sintetizados. Para usar outro áudio, substitua os arquivos mantendo os nomes.
+- **Mapa:** o vestíbulo ganhou uma parede com porta (`ManorMap.FOYER_DOOR`); o cache de paredes foi regenerado (658 blocos).
+- **Capturas:** `godot --path . --script res://tests/visual_check.gd -- <pasta>` abre o jogo por alguns segundos e grava PNGs.

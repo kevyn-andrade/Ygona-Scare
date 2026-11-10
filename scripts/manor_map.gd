@@ -5,7 +5,10 @@ const TS: int = 32
 const W: int = 53
 const H: int = 37
 
+const FOYER_DOOR: Vector2i = Vector2i(26, 27)
+
 var cells: Array = []
+var blocked: Dictionary = {}   # celulas de piso fechadas dinamicamente (portas)
 var nav: AStarGrid2D
 var rooms: Array = [
     {"name":"BIBLIOTECA", "x":2, "y":2, "w":16, "h":13, "shade":Color("253543")},
@@ -38,6 +41,10 @@ func _init() -> void:
     wall_line(46, 5, 6, true)
     wall_line(6, 25, 3, true)
     wall_line(47, 26, 4, false)
+    # Parede que fecha o vestibulo (quarto inicial trancado). A porta em
+    # FOYER_DOOR e piso no mapa estatico e bloqueada dinamicamente.
+    wall_line(19, 27, 15, true)
+    cells[FOYER_DOOR.y][FOYER_DOOR.x] = 0
     # Objetos sólidos visuais são desenhados no jogo, não bloqueiam corredores.
     nav = AStarGrid2D.new()
     nav.region = Rect2i(0, 0, W, H)
@@ -64,7 +71,15 @@ func wall_line(x0: int, y0: int, length: int, horizontal: bool) -> void:
 func is_wall_cell(x: int, y: int) -> bool:
     if x < 0 or y < 0 or x >= W or y >= H:
         return true
-    return cells[y][x] == 1
+    return cells[y][x] == 1 or blocked.has(Vector2i(x, y))
+
+func set_blocked(cell: Vector2i, closed: bool) -> void:
+    # Porta: fecha/abre colisao, linha de visao e pathfinding de uma vez.
+    if closed:
+        blocked[cell] = true
+    else:
+        blocked.erase(cell)
+    nav.set_point_solid(cell, closed)
 
 func is_wall_at(point: Vector2) -> bool:
     return is_wall_cell(int(floor(point.x / TS)), int(floor(point.y / TS)))

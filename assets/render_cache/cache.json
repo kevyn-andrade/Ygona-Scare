@@ -475,7 +475,7 @@
       "w": 2284,
       "h": 86,
       "z": 786.92,
-      "count": 8
+      "count": 9
     },
     {
       "path": "res://assets/render_cache/walls/d47.png",
@@ -485,7 +485,7 @@
       "w": 2284,
       "h": 86,
       "z": 802.28,
-      "count": 8
+      "count": 9
     },
     {
       "path": "res://assets/render_cache/walls/d48.png",
@@ -495,7 +495,7 @@
       "w": 2284,
       "h": 85,
       "z": 817.64,
-      "count": 8
+      "count": 9
     },
     {
       "path": "res://assets/render_cache/walls/d49.png",
@@ -505,7 +505,7 @@
       "w": 2284,
       "h": 86,
       "z": 833.0,
-      "count": 8
+      "count": 9
     },
     {
       "path": "res://assets/render_cache/walls/d50.png",
@@ -515,7 +515,7 @@
       "w": 2284,
       "h": 85,
       "z": 848.36,
-      "count": 9
+      "count": 10
     },
     {
       "path": "res://assets/render_cache/walls/d51.png",
@@ -525,7 +525,7 @@
       "w": 2284,
       "h": 86,
       "z": 863.72,
-      "count": 10
+      "count": 11
     },
     {
       "path": "res://assets/render_cache/walls/d52.png",
@@ -535,7 +535,7 @@
       "w": 2285,
       "h": 86,
       "z": 879.0799999999999,
-      "count": 10
+      "count": 11
     },
     {
       "path": "res://assets/render_cache/walls/d53.png",
@@ -555,7 +555,7 @@
       "w": 2161,
       "h": 86,
       "z": 909.8,
-      "count": 9
+      "count": 10
     },
     {
       "path": "res://assets/render_cache/walls/d55.png",
@@ -565,7 +565,7 @@
       "w": 2099,
       "h": 86,
       "z": 925.16,
-      "count": 9
+      "count": 10
     },
     {
       "path": "res://assets/render_cache/walls/d56.png",
@@ -575,7 +575,7 @@
       "w": 2039,
       "h": 85,
       "z": 940.52,
-      "count": 7
+      "count": 8
     },
     {
       "path": "res://assets/render_cache/walls/d57.png",
@@ -585,7 +585,7 @@
       "w": 1977,
       "h": 86,
       "z": 955.88,
-      "count": 6
+      "count": 7
     },
     {
       "path": "res://assets/render_cache/walls/d58.png",
@@ -595,7 +595,7 @@
       "w": 1915,
       "h": 86,
       "z": 971.24,
-      "count": 4
+      "count": 5
     },
     {
       "path": "res://assets/render_cache/walls/d59.png",
@@ -605,7 +605,7 @@
       "w": 1855,
       "h": 85,
       "z": 986.5999999999999,
-      "count": 5
+      "count": 6
     },
     {
       "path": "res://assets/render_cache/walls/d60.png",
@@ -615,7 +615,7 @@
       "w": 1793,
       "h": 86,
       "z": 1001.9599999999999,
-      "count": 6
+      "count": 7
     },
     {
       "path": "res://assets/render_cache/walls/d61.png",

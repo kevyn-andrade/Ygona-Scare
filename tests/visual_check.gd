@@ -20,6 +20,20 @@ func _shot(name: String, frames: int = 8) -> void:
     root.get_texture().get_image().save_png(out_dir.path_join(name + ".png"))
     print("captura: ", name)
 
+func _closeup(name: String, world_at: Vector2, frames: int = 8) -> void:
+    ## Recorte ampliado 4x em volta de um ponto do mundo (personagens, objetos).
+    for i in range(frames):
+        await process_frame
+    await RenderingServer.frame_post_draw
+    var img: Image = root.get_texture().get_image()
+    var k: Vector2 = Vector2(img.get_size())/Vector2(1152.0,720.0)
+    var c: Vector2 = (game.iso_renderer.screen(world_at)+Vector2(0,-45))*k
+    var half: Vector2 = Vector2(90,90)*k
+    var crop: Image = img.get_region(Rect2i(Vector2i(c-half).clamp(Vector2i.ZERO,img.get_size()),Vector2i(half*2.0)))
+    crop.resize(720,720,Image.INTERPOLATE_NEAREST)
+    crop.save_png(out_dir.path_join(name + ".png"))
+    print("captura: ", name)
+
 func _run() -> void:
     game = load("res://scenes/main.tscn").instantiate()
     root.add_child(game)
@@ -49,7 +63,7 @@ func _run() -> void:
     game.light_on = true
     game.flashlight_pose = 1.0
     game.monster = game.tile(26, 19)
-    Input.warp_mouse(Vector2(700, 150))
+    game.aim_override = Vector2(0,-1)
     await _shot("08_cone_com_entidade", 30)
     game.energy = 6.0
     game.monster = game.tile(26, 19)
@@ -66,7 +80,100 @@ func _run() -> void:
     game.library_open = true
     game.pulse_phase = 0.03
     await _shot("11_pulso_fragmento", 30)
+    await _closeup("13_silicone_de_perto", game.tile(10, 11), 4)
+    # Gesto da lanterna em quatro tempos, de perto, com a casa iluminada.
+    game.power_on = true
+    game.house_light = 1.0
+    game.player = game.tile(26, 31)
+    game.previous_player = game.player
+    game.aim_override = Vector2(1,1)
+    game.set_physics_process(false)
+    await _shot("14_vestibulo", 40)
+    var n: int = 0
+    for pose in [0.0, 0.2, 0.45, 0.75, 1.0]:
+        game.light_on = pose > 0.5
+        game.flashlight_pose = pose
+        game.previous_player = game.player
+        await _closeup("14_gesto_%d" % n, game.player, 5)
+        n += 1
+    # A entidade de perto: congelada na luz e perseguindo.
+    game.monster = game.tile(28, 31)
+    game.previous_monster = game.monster
+    game.power_on = false
+    game.monster_dormant = 0.0
+    game.house_light = 1.0
+    game.monster_lit = true
+    await _closeup("15_ygona_congelada", game.monster, 5)
+    game.monster_lit = false
+    game.monster_state = "PERSEGUINDO"
+    await _closeup("16_ygona_perseguindo", game.monster, 5)
+    # Assombracoes: salao com as penduradas, oficina com manequins, esconderijo.
+    game.monster = game.tile(45, 5)
+    game.previous_monster = game.monster
+    game.monster_state = "RONDA"
+    game.player = game.tile(26, 17)
+    game.previous_player = game.player
+    await _shot("19_salao_iluminado", 40)
+    await _closeup("20_pendurada", game.tile(30, 17) + Vector2(0,-40), 4)
+    game.house_light = 0.0
+    game.light_on = true
+    game.flashlight_pose = 1.0
+    game.player = game.tile(27, 21)
+    game.previous_player = game.player
+    game.aim_override = Vector2(0.55,-1)
+    game.look = game.aim_override.normalized()
+    game.apparition = {"at":game.tile(27, 14), "seen":0.0, "ttl":10.0}
+    game.freeze_time = 0.0
+    await _shot("21_salao_no_escuro", 40)
+    game.apparition = {}
+    game.monster = game.tile(27, 15)
+    game.previous_monster = game.monster
+    game.aim_override = Vector2(0,-1)
+    game.look = Vector2(0,-1)
+    game.monster_lit = true
+    game.freeze_time = 4.5
+    await _shot("22_sombra_rastejando", 30)
+    game.monster_lit = false
+    game.freeze_time = 0.0
+    game.monster = game.tile(45, 5)
+    game.previous_monster = game.monster
+    game.player = game.tile(42, 25)
+    game.previous_player = game.player
+    game.mannequins[1]["at"] = game.tile(42, 22)
+    game.mannequins[1]["moved"] = true
+    game.mannequins[0]["at"] = game.tile(39, 22)
+    game.mannequins[0]["moved"] = true
+    await _shot("23_oficina_manequins", 40)
+    game.house_light = 1.0
+    await _closeup("24_manequim", game.tile(42, 22), 4)
+    game.house_light = 0.0
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    game.in_hiding = true
+    game.monster = game.player + Vector2(60,0)
+    game.previous_monster = game.monster
+    game.dread = 0.9
+    await _shot("25_esconderijo", 6)
+    game.in_hiding = false
+    game.dread = 0.0
+    game.subliminal = 5.0
+    await _shot("26_relampago", 3)
+    game.subliminal = 0.0
+    game.house_light = 1.0
+    game.player = game.tile(26, 31)
+    game.previous_player = game.player
+    game.monster = game.tile(28, 31)
+    game.previous_monster = game.monster
+    game.ritual_running = true
+    game.ritual_left = 4.0
+    game.fragment_owned = [true,true,true]
+    game.house_light = 0.0
+    await _shot("17_ritual", 5)
+    game.ritual_running = false
+    game.set_physics_process(true)
     game._die()
     game.death_time = 0.45
     await _shot("12_jumpscare", 2)
+    game.death_time = 5.0
+    await _shot("18_morte", 3)
     quit(0)

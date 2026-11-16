@@ -46,7 +46,33 @@ const TELEPORT_MIN_DIST: float = 280.0    # so teleporta se estiver mais longe q
 const TELEPORT_MAX_DIST: float = 760.0    # ...e mais perto que isso
 const TELEPORT_KEEP: float = 190.0        # nunca reaparece mais perto que isso da jogadora
 
-# --------------------------- FRAGMENTOS ------------------------------------
+# --------------------------- PAVOR -----------------------------------------
+const HEART_RANGE: float = 430.0          # distancia em que o coracao comeca a bater (vinheta + som)
+const WHISPER_MIN: float = 9.0            # intervalo dos sussurros das vitimas (segundos)
+const WHISPER_MAX: float = 18.0
+const TRAIL_SPACING: float = 44.0         # distancia entre os pingos do rastro de sangue da entidade
+const TRAIL_SECONDS: float = 26.0         # quanto tempo o rastro leva para secar
+
+# --------------------------- ASSOMBRACOES ----------------------------------
+const APPARITION_MIN: float = 26.0        # intervalo entre aparicoes falsas da entidade (segundos)
+const APPARITION_MAX: float = 52.0
+const APPARITION_SAFE: float = 400.0      # so aparecem com a entidade verdadeira mais longe que isso
+const APPARITION_STARE: float = 0.38      # tempo sob a luz ate a aparicao estourar
+const APPARITION_SECONDS: float = 16.0    # some sozinha depois disso, se ninguem a encontrar
+const NOISE_MIN: float = 11.0             # intervalo dos barulhos da casa (rangido, batidas, arrasto)
+const NOISE_MAX: float = 24.0
+const STILL_SECONDS: float = 7.0          # parada no escuro por este tempo: passos vem por tras
+const SUBLIMINAL_COOLDOWN: float = 28.0   # intervalo minimo entre os rostos-relampago
+const MANNEQUIN_SPEED: float = 52.0       # manequins da oficina andam quando nao sao iluminados
+const MANNEQUIN_STOP: float = 118.0       # ...e param a esta distancia (logo fora do halo)
+const HIDE_SEEN_RANGE: float = 240.0      # esconder-se com ela te vendo a menos que isso: ela te acha
+const SHADOW_SPEED: float = 30.0          # px/s que a sombra dela rasteja enquanto esta congelada
+const SHADOW_MIN_SECONDS: float = 3.5     # tempo minimo ate a sombra alcancar a jogadora
+const SHADOW_JAM: float = 0.7             # segundos de lanterna apagada quando a sombra alcanca
+const CHASE_JERK: float = 0.45            # 0 = corrida uniforme; ela avanca aos trancos na perseguicao
+const FILM_GRAIN: float = 0.06            # granulado base do filtro de pavor (0 desliga)
+
+# --------------------------- SILICONES ("fragmentos" no codigo) ------------
 const PULSE_PERIOD: float = 4.6           # segundos entre pulsos com a entidade longe
 const PULSE_PERIOD_NEAR: float = 1.5      # ... com a entidade colada
 const PULSE_MIN_STRENGTH: float = 0.45    # forca do pulso com a entidade longe (1 = maximo)

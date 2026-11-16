@@ -36,10 +36,10 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 
 ## Como vencer
 
-1. **Biblioteca** — use F para ler a inscrição espectral, depois ative os livros na ordem indicada. Colete a fotografia.
-2. **Quarto** — ache a chave na **cozinha**. Use-a na caixa de música do quarto, atraindo a entidade, e colete a canção.
-3. **Oficina** — revele a sequência de selos com a luz espectral e interaja com os três selos na ordem correta. Colete o reflexo.
-4. **Vestíbulo** — retorne ao altar central, pressione E e sobreviva durante os 15 segundos do ritual.
+1. **Biblioteca** — use F para ler a inscrição espectral, depois ative os livros na ordem indicada. Pegue o silicone de Dalva.
+2. **Quarto** — ache a chave na **cozinha**. Use-a na caixa de música do quarto, atraindo a entidade, e pegue o silicone de Marlene.
+3. **Oficina** — revele a sequência de selos com a luz espectral e interaja com os três selos na ordem correta. Pegue o silicone de Soraia.
+4. **Vestíbulo** — retorne ao altar central, pressione E para devolver os três silicones e sobreviva durante os 15 segundos do ritual.
 5. Alcance a porta principal para ganhar.
 
 As passagens roxas (Costuras Espectrais) podem ser atravessadas com E enquanto a lanterna está em modo espectral. Com a lanterna guardada, a carga se recupera sozinha só até 30%; acima disso, só com pilhas.
@@ -133,3 +133,55 @@ tests/visual_check.gd      # captura telas de vários momentos para revisão
 - **Áudio da entidade:** `assets/audio/laugh.wav` e `jumpscare.wav` são sintetizados. Para usar outro áudio, substitua os arquivos mantendo os nomes.
 - **Mapa:** o vestíbulo ganhou uma parede com porta (`ManorMap.FOYER_DOOR`); o cache de paredes foi regenerado (658 blocos).
 - **Capturas:** `godot --path . --script res://tests/visual_check.gd -- <pasta>` abre o jogo por alguns segundos e grava PNGs.
+
+---
+
+## Atualização macabra — 16/11/2026
+
+| Tema | O que mudou |
+|---|---|
+| Protagonista | Redesenhada (adulta, vestida, sem nudez): busto mais proeminente, cintura marcada, colo à mostra no decote em V, respiração e balanço ao andar. A lanterna sobe **por trás** do busto, que se afasta enquanto ela passa, e só então é erguida e apontada. Ao guardar, o gesto se inverte. |
+| Artefatos | Os três "fragmentos" agora são os **silicones das mulheres sacrificadas no altar da Ygona** — Dalva (biblioteca), Marlene (caixa de música) e Soraia (espelho), personagens fictícias. São próteses de gel que tremem e pulsam; ao pegar cada uma, abre-se a etiqueta com a história da vítima, e ela vai para o decote junto da lanterna. No código continuam se chamando `fragment_*`. |
+| Ygona | Corpo comprido de vestido em farrapos, costelas à mostra, braços longos com garras que se estendem na perseguição, pescoço quebrado que estala mesmo sob a luz, órbitas ocas chorando preto e sorriso cortado. Novo rosto no jumpscare (maxilar despencando, duas fileiras de dentes, mãos fechando pelos lados), no menu e na tela de morte. Continua sendo uma aparição abstrata, sem reproduzir o rosto de ninguém. |
+| Altar e ritual | Altar ensanguentado, com velas que seguram um resto de luz no escuro. No ritual, os silicones aparecem sobre o tampo e as três mulheres se erguem em volta para levar a Ygona. |
+| Pavor | Batimento cardíaco e vinheta vermelha que aceleram com a proximidade; sussurros das vítimas; rastro de sangue que a entidade deixa e que seca aos poucos (dá para rastreá-la com a lanterna); quatro frases escritas pelas vítimas, visíveis só na luz espectral. |
+| Correções | O tremor de câmera existia no código mas nunca era aplicado — agora treme na queda de luz e ao pegar um silicone. Caixas de aviso medem o texto de verdade (frases longas não vazam mais). Tela de vitória mostra quantas vezes você morreu. |
+
+- **Parâmetros novos** em `scripts/game_config.gd` (seção PAVOR): `HEART_RANGE`, `WHISPER_MIN/MAX`, `TRAIL_SPACING`, `TRAIL_SECONDS`.
+- **Áudio novo** (sintetizado por `tools/build_audio.py`): `heartbeat.wav` e `whisper.wav`.
+- **Testes:** `smoke_test.gd` cobre a etiqueta dos silicones, o rastro e o pavor; `visual_check.gd` grava closes do gesto da lanterna, da Ygona e do ritual, e não move mais o cursor do mouse.
+
+---
+
+## Atualização de terror — 16/11/2026 (parte 2)
+
+Tudo abaixo é ajustável na seção **ASSOMBRAÇÕES** de `scripts/game_config.gd`.
+
+| Tema | O que mudou |
+|---|---|
+| Trilha de fundo | `assets/audio/lullaby.wav`: tema **original** de caixinha de música — agudo, repetitivo, em 6/8, com duas vozes desafinadas batendo uma na outra. Toca o tempo todo; fica mais lento e grave a cada silicone, e a "fita mastiga" quando a Ygona se aproxima. **Quando a música se cala de repente, tem algo parado no escuro.** Não é a música de Lavender Town (composição protegida); para usar outra faixa a que você tenha direito, substitua o arquivo mantendo o nome. |
+| Aparições falsas | De tempos em tempos uma Ygona falsa fica parada fora da luz, com os mesmos olhos da verdadeira. Iluminada ou tocada, ela estoura: a lanterna falha, a imagem rasga e às vezes um rosto pisca na tela. |
+| A luz não segura para sempre | Enquanto ela está congelada, a **sombra dela rasteja pelo chão** até você. Se alcançar, a lanterna apaga por um instante. É preciso recuar, não só apontar. |
+| Esconderijo | De dentro do armário só se vê pelas frestas — e, se ela estiver perto, um olho passa do outro lado procurando. **Entrar no armário com ela te vendo não funciona:** ela vai até lá e te tira. |
+| Manequins da oficina | Só andam quando a luz não está neles. Param na beira do seu halo, com a cabeça virada para você e um braço apontando. Não ferem. |
+| As três penduradas | Dalva, Marlene e Soraia estão embrulhadas em lençóis e penduradas no salão. Balançam mais quando iluminadas; de perto, dá para ver os olhos. Somem quando a Ygona é levada. |
+| Perseguição | Ela avança aos trancos, como um filme com quadros faltando. |
+| A casa | Rangidos, batidas na parede e coisas sendo arrastadas, em intervalos aleatórios. Ficar parada no escuro faz passos se aproximarem por trás, e alguém respira. |
+| Imagem | Filtro de pavor (`shaders/fear.gdshader`): granulado de filme, vinheta, cores drenadas e aberração cromática que pioram com a proximidade dela. |
+| Cenário | Marcas de arrasto até o altar, mãos ensanguentadas e recados escritos no assoalho; alguma coisa respirando debaixo do lençol da cama; bancadas de açougue e ganchos na cozinha. |
+
+- **Áudio novo** (`tools/build_audio.py`): `lullaby`, `creak`, `knock`, `scrape`, `breath`, `sting`.
+- **Dificuldade:** a sombra rastejante e o esconderijo comprometido deixam o jogo mais difícil. Para suavizar, aumente `SHADOW_MIN_SECONDS` / diminua `SHADOW_SPEED`, ou reduza `HIDE_SEEN_RANGE`.
+
+### Distorção da trilha
+
+A caixinha de música passa por um barramento próprio (`Caixinha`) com efeitos controlados em `update_theme` (`scripts/music_director.gd`):
+
+- **Ao contrário:** conforme a Ygona se aproxima, a melodia normal cede lugar a `lullaby_reverse.wav`, a mesma faixa invertida e um pouco mais grave — as duas nunca afinam.
+- **Apodrecendo:** o som racha (bitcrush), enjoa (phaser), afunda (filtro com ressonância) e ganha eco e reverberação. A cada silicone fica um pouco pior de forma permanente.
+- **Mergulhos:** com ela perto, a altura escorrega de repente e volta devagar.
+- **Disco engasgado:** nos sustos (aparição, sombra na lanterna, falha de luz) a música repete o mesmo pedaço cada vez mais rápido.
+- **Fita parando:** antes de uma aparição falsa a música não corta mais — ela despenca de altura até o silêncio.
+- Um limitador no fim da cadeia impede que a saída estoure.
+
+Se trocar `lullaby.wav` por outra faixa, rode `python3 tools/build_audio.py` só se quiser regenerar a original; para a sua, gere também a versão invertida (no Audacity: Efeitos → Inverter no tempo) e salve como `lullaby_reverse.wav`. `tests/audio_probe.gd` mostra os níveis de cada estágio.

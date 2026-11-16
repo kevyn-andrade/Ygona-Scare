@@ -1,7 +1,8 @@
 extends Node2D
 ## YGONA SCARE — Godot 4.7, vista 2.5D isometrica a 45 graus.
 ## Logica de colisao em grade + projecao artistica independente.
-## Heroina feminina com animacao de tirar/guardar lanterna no decote.
+## Heroina com animacao de tirar/guardar lanterna no decote; os artefatos sao
+## os silicones das mulheres sacrificadas no altar da entidade.
 
 const WIDTH: float = 1152.0
 const HEIGHT: float = 720.0
@@ -10,6 +11,47 @@ const PLAYER_WALK: float = 154.0
 const PLAYER_RUN: float = 240.0
 const CFG = preload("res://scripts/game_config.gd")
 const DrawLayer = preload("res://scripts/draw_layer.gd")
+
+## As tres mulheres sacrificadas no altar da Ygona (personagens ficticias).
+## Os "fragmentos" do codigo sao os silicones delas, guardados como trofeu.
+const VICTIMS: Array = [
+	{"name":"DALVA", "lines":[
+		"Ainda está morno. Pulsa devagar na sua mão.",
+		"",
+		"Na borda, riscado a unha:  D A L V A",
+		"",
+		"Ela lia em voz alta para a casa vazia.",
+		"A Ygona gostou da voz. Deitou-a no altar",
+		"e guardou isto entre os livros, como marcador.",
+		"",
+		"Você o guarda no decote, junto da lanterna."]},
+	{"name":"MARLENE", "lines":[
+		"Este treme sozinho, no compasso da caixa de música.",
+		"",
+		"Na borda, riscado a unha:  M A R L E N E",
+		"",
+		"Ela cantava para não ouvir a risada.",
+		"A Ygona a deitou no altar no meio do refrão",
+		"e trancou isto onde a canção nunca termina.",
+		"",
+		"Você o aperta no decote, ao lado do outro."]},
+	{"name":"SORAIA", "lines":[
+		"Frio como vidro. Do outro lado dele, alguém respira.",
+		"",
+		"Na borda, riscado a unha:  S O R A I A",
+		"",
+		"Ela só queria se ver bonita.",
+		"A Ygona a deitou no altar diante do espelho",
+		"e escondeu isto atrás do próprio reflexo.",
+		"",
+		"Não cabe mais nada no decote. Leve as três ao altar."]}
+]
+const WHISPERS: Array = [
+	"devolva...", "ela tirou de mim", "não apague a luz", "ela está rindo",
+	"atrás de você", "ainda estamos no altar", "meu nome era Dalva",
+	"eu ainda estava cantando", "não olhe o espelho", "ela conta os seus passos",
+	"leve a gente daqui", "ela gosta quando você corre"
+]
 
 var map: ManorMap
 var camera: Vector2 = Vector2.ZERO
@@ -83,6 +125,39 @@ var scare_flash: float = 0.0
 var last_room: String = ""
 var footstep_clock: float = 0.0
 var shake: float = 0.0
+var deaths: int = 0
+var blood_trail: Array = []       # pingos que a entidade deixa pelo caminho
+var trail_anchor: Vector2 = Vector2.ZERO
+var ghost_writings: Array = []    # frases das vitimas, visiveis so na luz espectral
+var dread: float = 0.0            # 0..1: proximidade da entidade (coracao/vinheta)
+var heart_clock: float = 0.0
+var heart_pulse: float = 0.0
+var whisper: Dictionary = {}
+var whisper_timer: float = 12.0
+var aim_override: Vector2 = Vector2.ZERO   # testes: mira fixa, ignora o mouse
+
+# Assombracoes: nada disto mata sozinho, mas tudo foi feito para dar medo.
+var fear_rect: ColorRect
+var apparition: Dictionary = {}   # Ygona falsa parada no escuro: {"at","seen","ttl"}
+var apparition_timer: float = 20.0
+var subliminal: float = 0.0       # segundos restantes do rosto-relampago
+var subliminal_cooldown: float = 0.0
+var glitch: float = 0.0           # rasgo de imagem (filtro de pavor)
+var music_duck: float = 0.0       # 1 = a caixinha de musica se cala
+var noise_timer_house: float = 9.0
+var still_time: float = 0.0
+var phantom_steps: int = 0
+var phantom_clock: float = 0.0
+var freeze_time: float = 0.0      # ha quanto tempo a luz segura a entidade
+var shadow_warned: bool = false
+var hide_compromised: bool = false
+var reading_scare: bool = false
+var mannequins: Array = []
+var mannequin_noise: float = 0.0
+var hanged: Array = []
+var drag_marks: Array = []
+var handprints: Array = []
+var floor_writings: Array = []
 
 var fragment_owned: Array = [false, false, false]
 var library_open: bool = false
@@ -151,6 +226,17 @@ func _setup_layers() -> void:
 	mat.set_shader_parameter("lift", IsoRenderer.WALL_HEIGHT/HEIGHT)
 	darkness_rect.material = mat
 	add_child(darkness_rect)
+	# Filtro de pavor: granulado, vinheta e distorcao por cima do mundo.
+	fear_rect = ColorRect.new()
+	fear_rect.name = "Medo"
+	fear_rect.show_behind_parent = true
+	fear_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fear_rect.size = Vector2(WIDTH, HEIGHT)
+	var fear_mat: ShaderMaterial = ShaderMaterial.new()
+	fear_mat.shader = load("res://shaders/fear.gdshader")
+	fear_mat.set_shader_parameter("grain", CFG.FILM_GRAIN)
+	fear_rect.material = fear_mat
+	add_child(fear_rect)
 
 func _reset_opening() -> void:
 	power_on = true
@@ -198,16 +284,16 @@ func _create_objects() -> void:
 		{"id":"book2", "kind":"book", "label":"Livro marcado II", "at":tile(10, 6), "number":2},
 		{"id":"book3", "kind":"book", "label":"Livro marcado III", "at":tile(14, 6), "number":3},
 		{"id":"lib_clue", "kind":"clue", "label":"Inscrição espectral", "at":tile(12, 11)},
-		{"id":"fragment1", "kind":"fragment", "label":"Fragmento: Fotografia", "at":tile(10, 11), "idx":0},
+		{"id":"fragment1", "kind":"fragment", "label":"Pegar o silicone de Dalva", "at":tile(10, 11), "idx":0},
 		{"id":"brass_key", "kind":"key", "label":"Chave de latão", "at":tile(43, 8)},
 		{"id":"musicbox", "kind":"box", "label":"Caixa de música", "at":tile(11, 26)},
-		{"id":"fragment2", "kind":"fragment", "label":"Fragmento: Canção", "at":tile(13, 25), "idx":1},
+		{"id":"fragment2", "kind":"fragment", "label":"Pegar o silicone de Marlene", "at":tile(13, 25), "idx":1},
 		{"id":"seal1", "kind":"seal", "label":"Selo I", "at":tile(39, 23), "number":1},
 		{"id":"seal2", "kind":"seal", "label":"Selo II", "at":tile(43, 23), "number":2},
 		{"id":"seal3", "kind":"seal", "label":"Selo III", "at":tile(48, 23), "number":3},
 		{"id":"mirror_clue", "kind":"clue", "label":"Escrita de outro mundo", "at":tile(44, 29)},
-		{"id":"fragment3", "kind":"fragment", "label":"Fragmento: Reflexo", "at":tile(44, 27), "idx":2},
-		{"id":"altar", "kind":"altar", "label":"Altar do ritual", "at":tile(26, 29)},
+		{"id":"fragment3", "kind":"fragment", "label":"Pegar o silicone de Soraia", "at":tile(44, 27), "idx":2},
+		{"id":"altar", "kind":"altar", "label":"Altar da Ygona", "at":tile(26, 29)},
 		{"id":"exit", "kind":"exit", "label":"Porta da frente", "at":tile(26, 34)},
 		# Abertura (GDD 2.3 / 3.7): carta da maldicao, bilhete, vaso com a chave, porta.
 		{"id":"letter", "kind":"letter", "label":"Ler a carta", "at":tile(22, 32)+Vector2(7,7)},
@@ -228,6 +314,36 @@ func _create_objects() -> void:
 		{"a":tile(4, 12), "b":tile(4, 21)},
 		{"a":tile(49, 12), "b":tile(49, 21)},
 		{"a":tile(16, 29), "b":tile(21, 29)}
+	]
+	ghost_writings = [
+		{"at":tile(26, 20), "text":"DEVOLVA O QUE É NOSSO"},
+		{"at":tile(9, 21), "text":"ELA RI ANTES DE CORTAR"},
+		{"at":tile(42, 13), "text":"TRÊS DE NÓS NO ALTAR"},
+		{"at":tile(27, 10), "text":"ELA NÃO PISCA"}
+	]
+	# As tres continuam penduradas no salao, onde a Ygona as deixou secar.
+	hanged = [{"at":tile(22, 12), "idx":0}, {"at":tile(30, 17), "idx":1}, {"at":tile(23, 23), "idx":2}]
+	mannequins = []
+	for cell in [Vector2i(36,19), Vector2i(42,19), Vector2i(49,19), Vector2i(36,31), Vector2i(45,31)]:
+		mannequins.append({"at":tile(cell.x, cell.y), "home":tile(cell.x, cell.y), "moved":false})
+	drag_marks = [
+		[tile(22,12)+Vector2(0,10), tile(23,16), tile(25,20)+Vector2(6,0), tile(26,24), tile(26,27), tile(26,29)+Vector2(0,-22)],
+		[tile(30,17)+Vector2(0,10), tile(29,20), tile(27,23)+Vector2(4,0), tile(26,26)+Vector2(8,0), tile(26,29)+Vector2(8,-22)],
+		[tile(11,26), tile(15,26), tile(18,25)+Vector2(0,8), tile(21,25), tile(24,26)]
+	]
+	handprints = [
+		{"at":tile(24,21), "rot":2.6}, {"at":tile(25,22)+Vector2(9,0), "rot":2.9}, {"at":tile(27,25), "rot":-2.7},
+		{"at":tile(28,18), "rot":2.2}, {"at":tile(20,26), "rot":1.5}, {"at":tile(26,30)+Vector2(-14,0), "rot":0.4},
+		{"at":tile(26,30)+Vector2(13,2), "rot":-0.5}, {"at":tile(13,24), "rot":1.2}, {"at":tile(40,25), "rot":-1.9},
+		{"at":tile(8,12), "rot":0.9}, {"at":tile(43,10), "rot":2.0}
+	]
+	floor_writings = [
+		{"at":tile(21,15), "text":"NÃO OLHE PARA TRÁS", "size":17},
+		{"at":tile(22,33)+Vector2(0,10), "text":"ELA JÁ SABE QUE VOCÊ ENTROU", "size":13},
+		{"at":tile(5,13), "text":"ELA LÊ JUNTO", "size":14},
+		{"at":tile(37,13), "text":"AQUI ELA NOS LAVOU", "size":14},
+		{"at":tile(3,31), "text":"NÃO DURMA", "size":16},
+		{"at":tile(37,25), "text":"ELES ANDAM", "size":16}
 	]
 
 func tile(x: int, y: int) -> Vector2:
@@ -252,6 +368,7 @@ func _restart_entirely() -> void:
 		bat["taken"] = false
 	time_passed = 0.0
 	pulse_phase = 0.0
+	deaths = 0
 	_reset_opening()
 	_respawn()
 	music.start()
@@ -282,6 +399,27 @@ func _respawn() -> void:
 	ritual_running = false
 	ritual_left = CFG.RITUAL_SECONDS
 	scare_flash = 0.0
+	shake = 0.0
+	blood_trail = []
+	trail_anchor = monster
+	dread = 0.0
+	heart_clock = 0.0
+	heart_pulse = 0.0
+	whisper = {}
+	whisper_timer = randf_range(CFG.WHISPER_MIN, CFG.WHISPER_MAX)
+	apparition = {}
+	apparition_timer = randf_range(CFG.APPARITION_MIN, CFG.APPARITION_MAX)*0.6
+	subliminal = 0.0
+	glitch = 0.0
+	music_duck = 0.0
+	noise_timer_house = randf_range(CFG.NOISE_MIN, CFG.NOISE_MAX)
+	still_time = 0.0
+	phantom_steps = 0
+	freeze_time = 0.0
+	hide_compromised = false
+	for m in mannequins:
+		m["at"] = m["home"]
+		m["moved"] = false
 	_reset_entity_tricks()
 	if not power_on:
 		monster_dormant = 3.0
@@ -383,6 +521,8 @@ func _physics_process(delta: float) -> void:
 		if status == "playing":
 			_update_abilities(delta)
 	_update_ritual(delta)
+	_update_dread(delta)
+	_update_haunting(delta)
 	_check_auto_batteries()
 	prompt_object = _nearest_interaction()
 	music.update_audio(delta, collected_count(), player.distance_to(monster), monster_present())
@@ -525,9 +665,26 @@ func _process(delta: float) -> void:
 		draw_player = previous_player.lerp(player,fraction)
 		draw_monster = previous_monster.lerp(monster,fraction)
 	camera = camera.lerp(_camera_target(),minf(1.0,delta*8.2))
+	# O tremor (queda de luz, silicone, susto) desloca mundo e mascara juntos.
+	var jolt: Vector2 = Vector2.ZERO
+	if shake > 0.0 and status == "playing":
+		jolt = Vector2(randf_range(-1,1),randf_range(-1,1))*minf(shake,0.6)*18.0
+	world_layer.position = jolt
+	mask_layer.position = jolt*0.5
+	var haunted: bool = status in ["playing", "reading", "paused"] and not power_on
+	fear_rect.material.set_shader_parameter("fear", dread if haunted else 0.0)
+	fear_rect.material.set_shader_parameter("glitch", clampf(glitch + (0.35 if light_jam > 0.0 else 0.0), 0.0, 1.0) if haunted else 0.0)
+	fear_rect.material.set_shader_parameter("clock", fposmod(real_time, 600.0))
+	if status != "playing":
+		glitch = maxf(0.0, glitch - delta*2.5)
+		subliminal = maxf(0.0, subliminal - delta)
+	music.update_theme(delta, collected_count(), dread if haunted else 0.0, music_duck if status == "playing" else 0.0, status in ["menu", "intro", "won"], (clampf(glitch + (0.6 if light_jam > 0.0 else 0.0), 0.0, 1.0)) if haunted else 0.0)
 	queue_redraw()
 
 func _update_aim() -> void:
+	if aim_override != Vector2.ZERO:
+		look = aim_override.normalized()
+		return
 	var aim_pos: Vector2 = iso_renderer.unproject(get_viewport().get_mouse_position() + camera)
 	var to_mouse = aim_pos - player
 	if to_mouse.length() > 7.0:
@@ -591,6 +748,138 @@ func _update_objects(dt: float) -> void:
 	for bottle in thrown_bottles:
 		bottle["ttl"] = float(bottle["ttl"]) - dt
 	thrown_bottles = thrown_bottles.filter(func(b): return float(b["ttl"]) > 0.0)
+	for drop in blood_trail:
+		drop["ttl"] = float(drop["ttl"]) - dt
+	blood_trail = blood_trail.filter(func(d): return float(d["ttl"]) > 0.0)
+
+func shadow_seconds(dist: float) -> float:
+	## Quanto tempo a luz consegue segurar a entidade a esta distancia.
+	return maxf(CFG.SHADOW_MIN_SECONDS, dist*0.92/CFG.SHADOW_SPEED)
+
+func _spawn_apparition() -> bool:
+	## Uma Ygona falsa, parada, num ponto que a jogadora ainda nao iluminou.
+	for attempt in range(14):
+		var ang: float = look.angle() + randf_range(-2.5, 2.5)
+		var raw: Vector2 = player + Vector2.from_angle(ang)*randf_range(150.0, 300.0)
+		var cell: Vector2i = Vector2i(int(raw.x/TILE), int(raw.y/TILE))
+		if map.is_wall_cell(cell.x, cell.y):
+			continue
+		var spot: Vector2 = map.cell_center(cell.x, cell.y)
+		if map.has_wall_between(player, spot) or is_illuminated(spot) or spot.distance_to(player) < 140.0:
+			continue
+		apparition = {"at":spot, "seen":0.0, "ttl":CFG.APPARITION_SECONDS}
+		music_duck = 1.0      # a caixinha se cala: o silencio e o aviso
+		return true
+	return false
+
+func _burst_apparition(touched: bool) -> void:
+	apparition = {}
+	light_jam = maxf(light_jam, 0.45)
+	glitch = 1.0
+	shake = 0.35
+	music_duck = 0.0
+	music.sfx("sting", -3.0, randf_range(0.9, 1.1))
+	if touched or randf() < 0.4:
+		subliminal = 0.13
+		subliminal_cooldown = CFG.SUBLIMINAL_COOLDOWN
+
+func _update_haunting(dt: float) -> void:
+	## Tudo aqui e teatro: aparicoes, barulhos, passos, manequins. Nada causa
+	## dano direto — serve para a jogadora nunca saber o que e verdadeiro.
+	glitch = maxf(0.0, glitch - dt*2.5)
+	subliminal = maxf(0.0, subliminal - dt)
+	subliminal_cooldown = maxf(0.0, subliminal_cooldown - dt)
+	mannequin_noise = maxf(0.0, mannequin_noise - dt)
+	if power_on:
+		return
+	if apparition.is_empty():
+		music_duck = move_toward(music_duck, 0.0, dt*0.5)
+		apparition_timer -= dt
+		if apparition_timer <= 0.0 and monster_present() and not in_hiding and monster_state == "RONDA" \
+				and player.distance_to(monster) > CFG.APPARITION_SAFE:
+			apparition_timer = randf_range(CFG.APPARITION_MIN, CFG.APPARITION_MAX) if _spawn_apparition() else 3.0
+	else:
+		apparition["ttl"] = float(apparition["ttl"]) - dt
+		var gap: float = player.distance_to(apparition["at"])
+		if is_illuminated(apparition["at"]):
+			apparition["seen"] = float(apparition["seen"]) + dt
+		if float(apparition["seen"]) > CFG.APPARITION_STARE or gap < 72.0:
+			_burst_apparition(gap < 72.0)
+		elif float(apparition["ttl"]) <= 0.0:
+			apparition = {}
+	# Rosto-relampago quando ela esta quase em cima.
+	if dread > 0.78 and subliminal_cooldown <= 0.0 and not monster_lit:
+		subliminal = 0.09
+		glitch = 0.8
+		subliminal_cooldown = CFG.SUBLIMINAL_COOLDOWN
+	# A casa range, bate e arrasta coisas sozinha.
+	noise_timer_house -= dt
+	if noise_timer_house <= 0.0:
+		noise_timer_house = randf_range(CFG.NOISE_MIN, CFG.NOISE_MAX)
+		var which: String = ["creak", "knock", "scrape", "creak", "knock"][randi() % 5]
+		music.sfx(which, randf_range(-17.0, -9.0), randf_range(0.85, 1.1))
+	# Parada no escuro: passos se aproximam por tras e alguem respira na nuca.
+	if not moving and not light_on and not in_hiding and monster_present():
+		still_time += dt
+	else:
+		still_time = minf(still_time, 0.0)
+		if still_time < 0.0:
+			still_time += dt
+	if still_time > CFG.STILL_SECONDS:
+		still_time = -14.0
+		phantom_steps = 4
+		phantom_clock = 0.0
+	if phantom_steps > 0:
+		phantom_clock -= dt
+		if phantom_clock <= 0.0:
+			phantom_clock = 0.42
+			music.sfx("step", -15.0 + float(4 - phantom_steps)*4.0, 0.7)
+			phantom_steps -= 1
+			if phantom_steps == 0:
+				music.sfx("breath", -5.0, 1.0)
+				glitch = 0.6
+	# Manequins: so andam quando a luz nao esta neles, e so ate a beira do halo.
+	var in_workshop: bool = map.room_name(player) == "OFICINA"
+	for m in mannequins:
+		var away: float = player.distance_to(m["at"])
+		if not in_workshop:
+			if away > 560.0:
+				m["at"] = m["home"]
+				m["moved"] = false
+			continue
+		if in_hiding or away <= CFG.MANNEQUIN_STOP or is_illuminated(m["at"]):
+			continue
+		var before: Vector2 = m["at"]
+		m["at"] = map.slide(before, before.direction_to(player)*CFG.MANNEQUIN_SPEED*dt, 8.0)
+		if before != m["at"]:
+			m["moved"] = true
+			if mannequin_noise <= 0.0 and away < 320.0:
+				mannequin_noise = randf_range(3.5, 6.5)
+				music.sfx("scrape", -15.0, randf_range(1.2, 1.5))
+
+func _update_dread(dt: float) -> void:
+	## Coracao e sussurros: o medo avisa antes dos olhos.
+	heart_pulse = maxf(0.0, heart_pulse - dt*3.2)
+	if not whisper.is_empty():
+		whisper["ttl"] = float(whisper["ttl"]) - dt
+		if float(whisper["ttl"]) <= 0.0:
+			whisper = {}
+	if not monster_present():
+		dread = move_toward(dread, 0.0, dt)
+		return
+	dread = clampf(1.0 - player.distance_to(monster)/CFG.HEART_RANGE, 0.0, 1.0)
+	if dread > 0.04:
+		heart_clock += dt*lerpf(1.0, 2.6, dread)
+		if heart_clock >= 1.0:
+			heart_clock = 0.0
+			heart_pulse = 1.0
+			music.heartbeat(lerpf(-22.0, -5.0, dread))
+	whisper_timer -= dt
+	if whisper_timer <= 0.0:
+		# As tres mulheres falam com quem carrega o que foi tirado delas.
+		whisper_timer = randf_range(CFG.WHISPER_MIN, CFG.WHISPER_MAX)
+		whisper = {"text":WHISPERS[randi() % WHISPERS.size()], "at":Vector2(randf_range(170.0,860.0),randf_range(170.0,520.0)), "ttl":3.4, "life":3.4}
+		music.sfx("whisper", -13.0, randf_range(0.8,1.15))
 
 func _check_auto_batteries() -> void:
 	for battery in batteries:
@@ -640,8 +929,27 @@ func _update_monster(dt: float) -> void:
 	monster_lit = is_illuminated(monster) and not in_hiding and not ghost_mode
 	if monster_lit:
 		monster_state = "CONGELADO"
+		# A luz a segura, mas a sombra dela continua vindo pelo chao.
+		freeze_time += dt
+		if not shadow_warned and freeze_time > 1.2:
+			shadow_warned = true
+			notify("A sombra dela rasteja até você. Não a segure por muito tempo — recue.", 5.0)
+		if freeze_time >= shadow_seconds(monster.distance_to(player)):
+			freeze_time = 0.0
+			light_jam = maxf(light_jam, CFG.SHADOW_JAM)
+			glitch = 1.0
+			shake = 0.3
+			laugh_cooldown = 0.0
+			laugh(-2.0)
+			music.sfx("click", -4.0, 0.7)
+			notify("A sombra alcançou a lanterna!", 1.6)
 		return
+	freeze_time = maxf(0.0, freeze_time - dt*1.5)
 	var dist = monster.distance_to(player)
+	if in_hiding and hide_compromised:
+		monster_state = "PERSEGUINDO"
+		alert_position = player
+		search_timer = 5.0
 	var seen = (not in_hiding) and dist < (250.0 + collected_count() * 48.0) and not map.has_wall_between(monster, player)
 	var ghost_noise = ghost_mode and light_on and dist < 345.0 and not in_hiding
 	if seen or ghost_noise:
@@ -686,16 +994,27 @@ func _update_monster(dt: float) -> void:
 			var speed = CFG.PATROL_SPEED + n * CFG.PATROL_SPEED_PER_FRAGMENT
 			if monster_state == "PERSEGUINDO":
 				speed = CFG.CHASE_SPEED + n * CFG.CHASE_SPEED_PER_FRAGMENT + (28.0 if ritual_running else 0.0)
+				# Ela nao corre: avanca aos trancos, como um filme com quadros faltando.
+				speed *= 1.0 + CFG.CHASE_JERK*sin(time_passed*11.0)
 			elif monster_state == "BUSCANDO":
 				speed = CFG.SEARCH_SPEED + n * CFG.SEARCH_SPEED_PER_FRAGMENT
 			monster = map.slide(monster, monster.direction_to(step_to) * speed * dt, 10.0)
+	if monster.distance_to(trail_anchor) > CFG.TRAIL_SPACING:
+		trail_anchor = monster
+		blood_trail.append({"at":monster+Vector2(randf_range(-7,7),randf_range(-7,7)), "ttl":CFG.TRAIL_SECONDS, "r":randf_range(3.5,7.5)})
+		if blood_trail.size() > 60:
+			blood_trail.pop_front()
 	# Uma captura só ocorre com contato físico, nunca à distância.
 	if not in_hiding and monster.distance_to(player) < 21.0:
+		_die()
+	elif in_hiding and hide_compromised and monster.distance_to(player) < 30.0:
+		in_hiding = false
 		_die()
 
 func _die() -> void:
 	status = "dead"
 	death_time = 0.0
+	deaths += 1
 	# Jumpscare: imagem + audio da entidade (troque assets/audio/jumpscare.wav).
 	music.sfx("jumpscare", 0.0)
 	scare_flash = 1.2
@@ -720,7 +1039,7 @@ func _update_ritual(dt: float) -> void:
 		monster_banished = true
 		monster_active = false
 		music.sfx("win")
-		notify("A YGONA FOI BANIDA. A PORTA DA FRENTE ESTÁ ABERTA!", 8.0)
+		notify("ELAS LEVARAM A YGONA. A PORTA DA FRENTE ESTÁ ABERTA!", 8.0)
 		scare_flash = 0.5
 
 func _nearest_interaction() -> Dictionary:
@@ -771,6 +1090,7 @@ func _interact() -> void:
 	var id: String = obj["id"]
 	if kind == "unhide":
 		in_hiding = false
+		hide_compromised = false
 		notify("Você saiu do esconderijo.", 1.5)
 		return
 	if kind == "hide":
@@ -778,7 +1098,15 @@ func _interact() -> void:
 		hiding_spot = obj["at"]
 		light_on = false
 		ghost_mode = false
-		notify("Fique quieto. Pressione E para sair.")
+		# Entrar no armario com ela olhando nao adianta nada.
+		hide_compromised = monster_present() and monster_state == "PERSEGUINDO" \
+				and monster.distance_to(player) < CFG.HIDE_SEEN_RANGE and not map.has_wall_between(monster, player)
+		if hide_compromised:
+			music.sfx("sting", -8.0, 1.2)
+			notify("ELA VIU VOCÊ ENTRAR. SAIA DAÍ!", 3.0)
+		else:
+			music.sfx("creak", -12.0, 1.25)
+			notify("Fique quieta. Não respire. E para sair.")
 		return
 	if kind == "portal":
 		if energy < 9.0:
@@ -801,14 +1129,17 @@ func _interact() -> void:
 			"A quem entrar nesta casa:",
 			"",
 			"Ela não morreu aqui. Ela ficou.",
+			"Três mulheres foram deitadas no altar dela.",
+			"De cada uma, a Ygona guardou os silicones como troféu",
+			"e os escondeu pela mansão.",
+			"",
 			"Enquanto houver luz sobre ela, não dará um passo.",
 			"No escuro, ela anda — e ri antes de vir.",
-			"",
 			"QUANDO OUVIR A RISADA, ACENDA A LUZ.",
 			"",
-			"Três fragmentos do que ela foi estão espalhados pela mansão.",
-			"Eles brilham de tempos em tempos. ACHE OS FRAGMENTOS",
-			"e leve-os ao altar. É a única saída.",
+			"Os silicones pulsam de tempos em tempos, como se ainda",
+			"respirassem. ACHE OS TRÊS e devolva-os ao altar.",
+			"É a única saída.",
 			"",
 			"P.S.: deixei um bilhete junto à porta do salão.",
 			"Leia, talvez te ajude a achar a chave."])
@@ -863,7 +1194,7 @@ func _interact() -> void:
 			music.sfx("click")
 			if library_sequence.size() == 3:
 				library_open = true
-				notify("A estante se abriu! Há um fragmento entre os livros.", 4.0)
+				notify("A estante se abriu! Há algo mole e pálido entre os livros.", 4.0)
 				music.sfx("pickup")
 				_make_noise(player, 460.0)
 			else:
@@ -888,7 +1219,7 @@ func _interact() -> void:
 			musicbox_open = true
 			_make_noise(player, 750.0)
 			music.sfx("stinger")
-			notify("A caixa tocou sozinha. A Ygona ouviu! Pegue o fragmento.", 5.0)
+			notify("A caixa tocou sozinha. A Ygona ouviu! Pegue o silicone.", 5.0)
 			scare_flash = 0.3
 		return
 	if kind == "seal":
@@ -901,7 +1232,7 @@ func _interact() -> void:
 				mirror_open = true
 				music.sfx("pickup")
 				_make_noise(player, 460.0)
-				notify("O espelho se partiu. O último fragmento apareceu!", 5.0)
+				notify("O espelho se partiu. O último silicone escorreu do vidro!", 5.0)
 			else:
 				notify("Um selo brilha: %s/3" % mirror_sequence.size())
 		else:
@@ -918,7 +1249,10 @@ func _interact() -> void:
 		shake = 0.22
 		_make_noise(player, 750.0)
 		var total = collected_count()
-		notify("FRAGMENTO %s/3. A Ygona despertou ainda mais!" % total, 5.5)
+		notify("SILICONE %s/3 no decote. A Ygona sentiu falta do troféu!" % total, 5.5)
+		# A leitura congela a simulacao: um folego antes da perseguicao.
+		_open_reading("SILICONE DE %s — %s/3" % [VICTIMS[index]["name"], total], VICTIMS[index]["lines"])
+		reading_scare = true
 		return
 	if kind == "altar":
 		if monster_banished:
@@ -926,7 +1260,7 @@ func _interact() -> void:
 		elif ritual_running:
 			notify("Ritual em andamento! Sobreviva por %s segundos." % int(ceil(ritual_left)))
 		elif collected_count() < 3:
-			notify("O altar exige TRÊS fragmentos. Encontrados: %s/3." % collected_count(), 4.0)
+			notify("O altar ainda espera por elas. Silicones: %s/3." % collected_count(), 4.0)
 		else:
 			ritual_running = true
 			ritual_left = CFG.RITUAL_SECONDS
@@ -936,14 +1270,14 @@ func _interact() -> void:
 			_make_noise(player, 1200.0)
 			music.sfx("stinger")
 			scare_flash = 0.65
-			notify("RITUAL INICIADO! SOBREVIVA POR %d SEGUNDOS!" % int(CFG.RITUAL_SECONDS), 6.0)
+			notify("VOCÊ DEVOLVEU OS SILICONES. ELAS ESTÃO VINDO — SOBREVIVA %d SEGUNDOS!" % int(CFG.RITUAL_SECONDS), 6.0)
 		return
 	if kind == "exit":
 		if monster_banished:
 			status = "won"
 			music.sfx("win")
 		elif collected_count() < 3:
-			notify("A porta está selada. Reúna os três fragmentos.")
+			notify("A porta está selada. Devolva os três silicones ao altar.")
 		else:
 			notify("O selo da porta ainda existe. Volte ao ALTAR!")
 		return
@@ -959,6 +1293,13 @@ func _open_reading(title: String, lines: Array) -> void:
 func _close_reading() -> void:
 	reading = {}
 	status = "playing"
+	if reading_scare:
+		# Ao guardar a etiqueta, ela esta olhando. So por um instante.
+		reading_scare = false
+		subliminal = 0.11
+		glitch = 1.0
+		subliminal_cooldown = CFG.SUBLIMINAL_COOLDOWN
+		music.sfx("sting", -7.0, 1.15)
 
 func _throw_bottle() -> void:
 	if in_hiding:
@@ -980,7 +1321,7 @@ func _objective() -> String:
 	if ritual_running:
 		return "SOBREVIVA AO RITUAL: %s s" % int(ceil(ritual_left))
 	if collected_count() == 3:
-		return "Leve os 3 fragmentos ao ALTAR do vestíbulo."
+		return "Tire os 3 silicones do decote e devolva-os ao ALTAR do vestíbulo."
 	if power_on:
 		if not letter_read:
 			return "Há uma carta sobre a mesa."
@@ -989,12 +1330,12 @@ func _objective() -> String:
 		return "Destranque a porta do salão."
 	if collected_count() == 0:
 		if not ghost_unlocked:
-			return "Ache os fragmentos. Eles brilham de tempos em tempos."
-		return "Procure 3 fragmentos. Inspecione a biblioteca com a luz espectral."
+			return "Ache os silicones das sacrificadas. Eles pulsam de tempos em tempos."
+		return "Procure os 3 silicones. Inspecione a biblioteca com a luz espectral."
 	if not fragment_owned[1]:
 		return "Explore a cozinha e encontre a chave da caixa de música."
 	if not fragment_owned[2]:
-		return "Os selos da oficina escondem um reflexo."
+		return "Os selos da oficina escondem o silicone de Soraia."
 	return "Explore cômodos e siga as inscrições fantasmagóricas."
 
 # --------------------------- DESENHO --------------------------------------
@@ -1007,7 +1348,14 @@ func _draw() -> void:
 		return
 	if status in ["playing", "reading", "paused"]:
 		_draw_glows()
+		if in_hiding and status == "playing":
+			_draw_hiding()
+		_draw_dread()
 	_draw_hud()
+	if subliminal > 0.0 and status == "playing":
+		# Rosto-relampago: poucos quadros, escuro demais para ter certeza.
+		_entity_face(Vector2(WIDTH*0.5+randf_range(-14,14),HEIGHT*0.5-30.0),2.3,Color("f0457c"),0.7)
+		draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.03,0.0,0.01,0.42))
 	if status == "reading":
 		_draw_reading()
 	elif status == "dead" and death_time < CFG.JUMPSCARE_SECONDS:
@@ -1034,11 +1382,15 @@ func _draw_hud() -> void:
 	_world_txt(Vector2(226,79),"ENERGIA %s%%" % int(energy),12,Color("bcb8d2"))
 	_draw_bar(Vector2(356,68),142,12,endurance/100.0,Color("7cb2a4"))
 	_world_txt(Vector2(502,79),"FÔLEGO",12,Color("a2bcb9"))
-	_world_txt(Vector2(655,30),"FRAGMENTOS",14,Color("cdc7d6"))
+	_world_txt(Vector2(655,30),"SILICONES",14,Color("cdc7d6"))
 	for i in range(3):
-		var x = 797 + i*42
-		var c = Color("f0cd8a") if fragment_owned[i] else Color("5b5968")
-		draw_colored_polygon(PackedVector2Array([Vector2(x,16),Vector2(x+13,28),Vector2(x,40),Vector2(x-13,28)]),c)
+		var x = 782 + i*44
+		if fragment_owned[i]:
+			iso_renderer.gel(self,Vector2(x,37),14.0,sin(real_time*4.0+float(i)*1.9)*0.9)
+		else:
+			draw_arc(Vector2(x,37),14.0,PI,TAU,18,Color("5b5968"),1.5)
+			draw_line(Vector2(x-14,37),Vector2(x+14,37),Color("5b5968"),1.5)
+		_world_txt(Vector2(x-17,52),str(VICTIMS[i]["name"]),8,Color("d9b8c4") if fragment_owned[i] else Color("5f5c6c"))
 	var lit_status: String = "ESPECTRAL" if ghost_mode else ("GUARDADA" if not light_on else "NORMAL")
 	if flashlight_pose > 0.02 and flashlight_pose < 0.98:
 		lit_status = "TIRANDO..." if light_on else "GUARDANDO..."
@@ -1058,13 +1410,13 @@ func _draw_hud() -> void:
 	_world_txt(Vector2(26,HEIGHT-20),helper,11,Color("a6a8b8"))
 	if hint_timer > 0.0:
 		var message = hint
-		var max_width = minf(WIDTH-80.0, float(message.length())*9.0+38.0)
+		var max_width = minf(WIDTH-40.0, ThemeDB.fallback_font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,16).x+38.0)
 		draw_rect(Rect2((WIDTH-max_width)*0.5,HEIGHT-137,max_width,37),Color(0.08,0.07,0.12,0.92))
 		_world_txt(Vector2((WIDTH-max_width)*0.5+17,HEIGHT-113),message,16,Color("f0e2c9"))
 	if status == "playing":
 		if not prompt_object.is_empty():
 			var prompt = "[E] " + str(prompt_object["label"])
-			var panel_width = minf(520.0, float(prompt.length())*9.0+35.0)
+			var panel_width = minf(620.0, ThemeDB.fallback_font.get_string_size(prompt,HORIZONTAL_ALIGNMENT_LEFT,-1,17).x+35.0)
 			var at = Vector2((WIDTH-panel_width)/2,HEIGHT-198)
 			draw_rect(Rect2(at,Vector2(panel_width,42)),Color(0.08,0.10,0.15,0.92))
 			draw_rect(Rect2(at,Vector2(panel_width,42)),Color("6f6489"),false,1)
@@ -1098,13 +1450,17 @@ func _center_text(message: String, baseline_y: float, size: int,color: Color) ->
 func _draw_overlay() -> void:
 	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.02,0.025,0.045,0.86))
 	if status == "menu":
-		draw_circle(Vector2(WIDTH/2,180),80,Color(0.41,0.13,0.29,0.13))
-		draw_arc(Vector2(WIDTH/2,180),72,0,TAU,48,Color("866178"),2)
+		# A cara dela atras do titulo, quase apagada, piscando no escuro.
+		var peek: float = 0.10+0.05*sin(real_time*0.9)
+		if fposmod(real_time,7.0) > 6.86:
+			peek = 0.55
+		_entity_face(Vector2(WIDTH/2,168),0.92,Color("f0457c"),0.12)
+		draw_rect(Rect2(0,0,WIDTH,430),Color(0.02,0.025,0.045,1.0-peek))
 		_center_text("YGONA SCARE",195,56,Color("ead7c5"))
 		_center_text("SE VOCÊ DESVIAR O OLHAR, ELA SE MOVE",241,18,Color("c1a5b1"))
-		_center_text("Encontre três fragmentos, rompa a maldição e saia da mansão.",314,22,Color("d4cbd5"))
-		_center_text("Fora da luz da lanterna, tudo é escuro. E é no escuro que ela anda.",350,19,Color("aeb9d5"))
-		_center_text("Quando ouvir a risada, acenda a luz.",380,19,Color("aeb9d5"))
+		_center_text("Três mulheres foram sacrificadas no altar. Ela guardou os silicones.",314,22,Color("d4cbd5"))
+		_center_text("Ache os três, devolva-os ao altar e saia da mansão.",346,19,Color("aeb9d5"))
+		_center_text("Fora da luz, tudo é escuro — e é no escuro que ela anda. Quando ouvir a risada, acenda a luz.",378,16,Color("aeb9d5"))
 		draw_rect(Rect2(WIDTH/2-199,437,398,58),Color("5d4056"))
 		_center_text("PRESSIONE ENTER PARA JOGAR",477,23,Color("fff2e5"))
 		_center_text("WASD MOVER  •  MOUSE MIRAR  •  ESPAÇO TIRAR/GUARDAR  •  F ESPECTRAL",553,16,Color("b1a9b9"))
@@ -1115,18 +1471,17 @@ func _draw_overlay() -> void:
 		_center_text("ESC para continuar",342,24,Color("cfc6db"))
 		_center_text("A criatura espera do outro lado da porta...",391,18,Color("9295a8"))
 	elif status == "dead":
-		var eyes = Vector2(WIDTH/2,208)
-		draw_circle(eyes-Vector2(36,0),13,Color("ef6374"))
-		draw_circle(eyes+Vector2(36,0),13,Color("ef6374"))
-		_center_text("A YGONA ENCONTROU VOCÊ",327,45,Color("f4a9ac"))
-		_center_text("Seus fragmentos coletados foram preservados.",393,20,Color("d8c5c9"))
+		_entity_face(Vector2(WIDTH/2,170),0.62,Color("ef6374"),0.25)
+		draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.02,0.0,0.01,0.55))
+		_center_text("A YGONA DEITOU VOCÊ NO ALTAR",327,45,Color("f4a9ac"))
+		_center_text("Os silicones no seu decote ela ainda não achou. Você continua com eles.",393,20,Color("d8c5c9"))
 		_center_text("Pressione R para reaparecer no vestíbulo",451,22,Color("fff0db"))
 		_center_text("ESC para voltar ao menu",493,16,Color("9c98a8"))
 	elif status == "won":
 		draw_arc(Vector2(WIDTH/2,198),83,0,TAU,60,Color("e1c68a"),3)
 		_center_text("MALDIÇÃO ROMPIDA",217,48,Color("f1dfb7"))
-		_center_text("Você reuniu os fragmentos, baniu a Ygona e escapou.",302,23,Color("dbd1cf"))
-		_center_text("Tempo de fuga: %02d:%02d" % [int(time_passed / 60.0), int(time_passed) % 60],367,23,Color("c5cbd9"))
+		_center_text("Dalva, Marlene e Soraia têm de volta o que era delas. E levaram a Ygona.",302,23,Color("dbd1cf"))
+		_center_text("Tempo de fuga: %02d:%02d   •   Vezes no altar: %d" % [int(time_passed / 60.0), int(time_passed) % 60, deaths],367,23,Color("c5cbd9"))
 		_center_text("Pressione R para jogar novamente",448,23,Color("fff0db"))
 		_center_text("ESC para o menu",485,16,Color("979aab"))
 
@@ -1142,23 +1497,88 @@ func _draw_glows() -> void:
 		var at: Vector2 = item["at"]
 		var p: Vector2 = iso_renderer.screen(at)+Vector2(0,-22)
 		if view.has_point(p):
-			draw_circle(p,12.0+30.0*v,Color(1.0,.80,.42,.10*v))
-			draw_circle(p,6.0+10.0*v,Color(1.0,.86,.55,.30*v))
-			draw_circle(p,2.2+1.5*v,Color(1.0,.96,.82,.9*v))
+			draw_circle(p,12.0+30.0*v,Color(1.0,.62,.74,.10*v))
+			draw_circle(p,6.0+10.0*v,Color(1.0,.76,.84,.26*v))
 		elif player.distance_to(at) < CFG.PULSE_HINT_RANGE:
 			# Fora da tela: um clarao na borda aponta de onde veio o pulso.
 			var edge: Vector2 = Vector2(clampf(p.x,view.position.x,view.end.x),clampf(p.y,view.position.y,view.end.y))
-			draw_circle(edge,34.0,Color(1.0,.80,.42,.07*v))
-			draw_circle(edge,16.0,Color(1.0,.84,.50,.16*v))
-			draw_circle(edge,4.0,Color(1.0,.93,.74,.55*v))
+			draw_circle(edge,34.0,Color(1.0,.62,.74,.07*v))
+			draw_circle(edge,16.0,Color(1.0,.72,.82,.16*v))
+			draw_circle(edge,4.0,Color(1.0,.90,.93,.55*v))
 	# Olhos da entidade no escuro: unico aviso visual quando a luz nao esta nela.
 	if CFG.EYES_RANGE > 0.0 and monster_present() and not monster_lit and not in_hiding:
 		var dist: float = draw_monster.distance_to(draw_player)
 		if dist < CFG.EYES_RANGE and not map.has_wall_between(monster, player):
 			var a: float = (1.0 - dist/CFG.EYES_RANGE)*0.95
-			var head: Vector2 = iso_renderer.screen(draw_monster)+Vector2(0,-59)
-			draw_circle(head+Vector2(-4,0),2.5,Color(.96,.46,.64,a))
-			draw_circle(head+Vector2(5,0),2.5,Color(.96,.46,.64,a))
+			var head: Vector2 = iso_renderer.screen(draw_monster)+Vector2(0,-85)
+			draw_circle(head+Vector2(-5,0),5.0,Color(1.0,.15,.36,a*0.22))
+			draw_circle(head+Vector2(5,0),5.0,Color(1.0,.15,.36,a*0.22))
+			draw_circle(head+Vector2(-5,0),2.0,Color(1.0,.30,.48,a))
+			draw_circle(head+Vector2(5,0),2.0,Color(1.0,.30,.48,a))
+	# A aparicao falsa tem os mesmos olhos. Nao da para saber qual e qual.
+	if not apparition.is_empty() and not in_hiding and not is_illuminated(apparition["at"]):
+		var fake: Vector2 = iso_renderer.screen(apparition["at"])+Vector2(0,-85)
+		var fa: float = clampf((CFG.APPARITION_SECONDS-float(apparition["ttl"]))/1.2,0.0,1.0)*0.9
+		draw_circle(fake+Vector2(-5,0),5.0,Color(1.0,.15,.36,fa*0.22))
+		draw_circle(fake+Vector2(5,0),5.0,Color(1.0,.15,.36,fa*0.22))
+		draw_circle(fake+Vector2(-5,0),2.0,Color(1.0,.30,.48,fa))
+		draw_circle(fake+Vector2(5,0),2.0,Color(1.0,.30,.48,fa))
+
+func _draw_hiding() -> void:
+	## De dentro do armario so se ve pelas frestas. Se ela estiver perto,
+	## um olho passa devagar do outro lado, procurando.
+	var gap: float = player.distance_to(monster)
+	var near: float = clampf(1.0 - gap/190.0, 0.0, 1.0) if monster_present() else 0.0
+	if near > 0.0:
+		var ex: float = WIDTH*0.5 + sin(real_time*0.6)*260.0*(1.0-near)
+		var eye: Vector2 = Vector2(ex, 352.0 + sin(real_time*1.7)*5.0)
+		var size: float = 0.8 + 1.3*near
+		draw_circle(eye,150.0*size,Color("8f8088"))
+		for v in range(9):
+			var va: float = TAU*float(v)/9.0+0.3
+			draw_line(eye+Vector2.from_angle(va)*52.0*size,eye+Vector2.from_angle(va+0.2)*96.0*size,Color("5a0f1c"),2.5*size)
+		draw_circle(eye,62.0*size,Color("050307"))
+		# A pupila procura... e, bem de perto, para em voce.
+		var search: Vector2 = Vector2(sin(real_time*2.3)*22.0,cos(real_time*1.9)*9.0)*size*(1.0-near*near)
+		draw_circle(eye+search,26.0*size,Color(0.94,0.20,0.40,0.25))
+		draw_circle(eye+search,11.0*size,Color("f0457c"))
+		draw_circle(eye+search,4.0*size,Color("fff6f2"))
+	var dark: Color = Color(0.012,0.008,0.015,1.0 if near > 0.0 else 0.94)
+	var slits: Array = [296.0, 344.0, 392.0]
+	var top: float = 0.0
+	for y in slits:
+		draw_rect(Rect2(0,top,WIDTH,y-top),dark)
+		top = y+13.0
+	draw_rect(Rect2(0,top,WIDTH,HEIGHT-top),dark)
+	draw_rect(Rect2(0,280,300,140),dark)
+	draw_rect(Rect2(WIDTH-300,280,300,140),dark)
+	for y in slits:
+		draw_line(Vector2(300,y),Vector2(WIDTH-300,y),Color("2a1f24"),1.0)
+	if hide_compromised:
+		_center_text("ELA SABE ONDE VOCÊ ESTÁ",470,22,Color("f4a9ac"))
+	elif near > 0.35:
+		_center_text("não respire",470,15,Color(0.75,0.62,0.68,0.5+0.4*sin(real_time*5.0)))
+
+func _draw_dread() -> void:
+	# Sussurro das vitimas: aparece num canto e some antes de dar para ler direito.
+	if not whisper.is_empty() and status == "playing":
+		var k: float = float(whisper["ttl"])/float(whisper["life"])
+		var wa: float = sin(clampf(k,0.0,1.0)*PI)*0.55
+		var at: Vector2 = whisper["at"]
+		at += Vector2(sin(real_time*1.3)*4.0,(1.0-k)*-14.0)
+		draw_string(ThemeDB.fallback_font,at,str(whisper["text"]),HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color(.80,.62,.70,wa))
+	# Vinheta de sangue que bate junto com o coracao quando ela esta perto.
+	var strength: float = dread*(0.10+0.30*heart_pulse)
+	if strength < 0.01:
+		return
+	var c: Color = Color(0.55,0.02,0.07,strength)
+	var z: Color = Color(0.55,0.02,0.07,0.0)
+	var depth: float = 170.0
+	var cols: PackedColorArray = PackedColorArray([c,c,z,z])
+	draw_polygon(PackedVector2Array([Vector2(0,0),Vector2(WIDTH,0),Vector2(WIDTH,depth),Vector2(0,depth)]),cols)
+	draw_polygon(PackedVector2Array([Vector2(0,HEIGHT),Vector2(WIDTH,HEIGHT),Vector2(WIDTH,HEIGHT-depth),Vector2(0,HEIGHT-depth)]),cols)
+	draw_polygon(PackedVector2Array([Vector2(0,0),Vector2(0,HEIGHT),Vector2(depth,HEIGHT),Vector2(depth,0)]),cols)
+	draw_polygon(PackedVector2Array([Vector2(WIDTH,0),Vector2(WIDTH,HEIGHT),Vector2(WIDTH-depth,HEIGHT),Vector2(WIDTH-depth,0)]),cols)
 
 # --------------------------- CARTAS E BILHETES -----------------------------
 func _draw_reading() -> void:
@@ -1184,37 +1604,103 @@ func _draw_reading() -> void:
 	draw_string(font,Vector2((WIDTH-cw)*0.5,box.end.y-22.0),close,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("7a6a55"))
 
 # --------------------------- JUMPSCARE -------------------------------------
-func _entity_face(center: Vector2, zoom: float, eyes: Color) -> void:
+func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) -> void:
+	## Rosto da Ygona: caveira comprida, orbitas ocas chorando preto e um sorriso
+	## cortado ate as orelhas. "gape" (0..1) desloca o maxilar.
+	## Aparicao ficticia e abstrata: nao reproduz o rosto de nenhuma pessoa real.
 	draw_set_transform(center,0.0,Vector2(zoom,zoom))
-	for i in range(15):
-		var sx: float = -150.0 + float(i)*21.5
-		draw_line(Vector2(sx*0.55,-120),Vector2(sx*1.15+sin(real_time*7.0+float(i))*6.0,170),Color("2a1836"),9.0)
-	draw_circle(Vector2(0,-8),128.0,Color("120b18"))
-	draw_circle(Vector2(0,0),104.0,Color("6f5362"))
-	draw_circle(Vector2(0,26),88.0,Color("7d6170"))
+	var jaw: float = 78.0*clampf(gape,0.0,1.0)
+	var bone: Color = Color("8f8088")
+	for i in range(17):
+		var sx: float = -160.0 + float(i)*20.0
+		draw_line(Vector2(sx*0.55,-120),Vector2(sx*1.15+sin(real_time*7.0+float(i))*6.0,190+fposmod(float(i)*37.0,60.0)),Color("17101c"),9.0)
+	draw_circle(Vector2(0,-8),128.0,Color("0c070f"))
+	# Maxilar pendurado, depois o cranio por cima.
+	draw_colored_polygon(PackedVector2Array([Vector2(-66,70),Vector2(66,70),Vector2(46,122+jaw),Vector2(0,138+jaw),Vector2(-46,122+jaw)]),Color("75666e"))
+	draw_colored_polygon(PackedVector2Array([Vector2(-92,-40),Vector2(-78,-92),Vector2(-40,-118),Vector2(0,-124),Vector2(40,-118),Vector2(78,-92),Vector2(92,-40),Vector2(84,30),Vector2(62,90),Vector2(26,112),Vector2(0,116),Vector2(-26,112),Vector2(-62,90),Vector2(-84,30)]),bone)
 	for side in [-1.0, 1.0]:
-		var eye: Vector2 = Vector2(44.0*side,-26.0)
-		draw_circle(eye,36.0,Color("0b0610"))
-		draw_circle(eye,29.0,Color("efe6e2"))
-		draw_circle(eye+Vector2(-3.0*side,3),15.0,eyes)
-		draw_circle(eye+Vector2(-3.0*side,3),6.0,Color("08040a"))
-		draw_line(eye+Vector2(-40.0*side,-44),eye+Vector2(30.0*side,-30),Color("120b18"),9.0)
-	var mouth: PackedVector2Array = PackedVector2Array([Vector2(-66,34),Vector2(-34,26),Vector2(0,30),Vector2(34,26),Vector2(66,34),Vector2(46,84),Vector2(0,104),Vector2(-46,84)])
-	draw_colored_polygon(mouth,Color("0d0508"))
-	for i in range(7):
-		var tx: float = -52.0 + float(i)*17.5
-		draw_colored_polygon(PackedVector2Array([Vector2(tx-7,31),Vector2(tx+7,31),Vector2(tx,50)]),Color("e9dfd2"))
-		draw_colored_polygon(PackedVector2Array([Vector2(tx-6,93-absf(tx)*0.2),Vector2(tx+6,93-absf(tx)*0.2),Vector2(tx,76-absf(tx)*0.2)]),Color("d8cbbd"))
+		# Bochechas fundas.
+		draw_colored_polygon(PackedVector2Array([Vector2(84*side,-2),Vector2(54*side,12),Vector2(44*side,74),Vector2(64*side,86)]),Color("5a4953"))
+	# Rachaduras e o sinal entalhado na testa.
+	var crack: Color = Color("2a1c26")
+	draw_polyline(PackedVector2Array([Vector2(-12,-124),Vector2(-24,-96),Vector2(-10,-74),Vector2(-18,-58)]),crack,2.4)
+	draw_line(Vector2(-24,-96),Vector2(-46,-84),crack,1.8)
+	draw_polyline(PackedVector2Array([Vector2(34,-119),Vector2(42,-94),Vector2(30,-80)]),crack,2.0)
+	draw_polyline(PackedVector2Array([Vector2(-11,-104),Vector2(11,-104),Vector2(0,-84),Vector2(-11,-104)]),Color("5a0f1c"),2.6)
+	draw_line(Vector2(0,-110),Vector2(0,-80),Color("5a0f1c"),2.0)
+	for side in [-1.0, 1.0]:
+		var eye: Vector2 = Vector2(46.0*side,-30.0)
+		# Orbitas ocas e caidas, com veias em volta.
+		for v in range(7):
+			var va: float = TAU*float(v)/7.0+side*0.4
+			draw_line(eye+Vector2.from_angle(va)*30.0,eye+Vector2.from_angle(va+0.25)*(50.0+fposmod(float(v)*13.0,9.0)),Color("5a0f1c"),2.0)
+		draw_circle(eye,39.0,Color("050307"))
+		draw_circle(eye+Vector2(-2.0*side,15),30.0,Color("050307"))
+		# No fundo, uma pupila minuscula que nunca desvia.
+		var pupil: Vector2 = eye+Vector2(-4.0*side,5)
+		draw_circle(pupil,17.0,Color(eyes.r,eyes.g,eyes.b,0.16))
+		draw_circle(pupil,7.0,eyes)
+		draw_circle(pupil,2.4,Color("fff6f2"))
+		# Lagrimas pretas escorrendo.
+		var run: float = 62.0+14.0*sin(real_time*2.6+side*1.7)
+		draw_line(eye+Vector2(-6.0*side,36),eye+Vector2(-9.0*side,44+run),Color("050307"),8.0)
+		draw_line(eye+Vector2(12.0*side,38),eye+Vector2(14.0*side,40+run*0.55),Color("050307"),4.0)
+		draw_line(eye+Vector2(-42.0*side,-46),eye+Vector2(30.0*side,-34),Color("0c070f"),10.0)
+		# O sorriso foi cortado ate as orelhas e mal costurado.
+		var corner: Vector2 = Vector2(70.0*side,40)
+		var ear: Vector2 = Vector2(100.0*side,2)
+		draw_line(corner,ear,Color("3d0812"),7.0)
+		for k in range(4):
+			var st: Vector2 = corner.lerp(ear,0.18+float(k)*0.24)
+			draw_line(st+Vector2(5,7),st+Vector2(-5,-7),Color("c9bcae"),1.8)
+	draw_colored_polygon(PackedVector2Array([Vector2(-9,24),Vector2(0,0),Vector2(9,24)]),Color("140a11"))
+	# Boca: garganta vermelha la no fundo e duas fileiras de dentes em agulha.
+	var low: float = 108.0+jaw
+	draw_colored_polygon(PackedVector2Array([Vector2(-70,40),Vector2(-36,34),Vector2(0,38),Vector2(36,34),Vector2(70,40),Vector2(56,82+jaw*0.6),Vector2(24,low),Vector2(0,low+6),Vector2(-24,low),Vector2(-56,82+jaw*0.6)]),Color("060204"))
+	draw_circle(Vector2(0,74+jaw*0.5),16.0+jaw*0.16,Color(0.42,0.03,0.08,0.85))
+	draw_circle(Vector2(0,76+jaw*0.5),7.0+jaw*0.08,Color("060204"))
+	for i in range(10):
+		var ix: float = -49.5 + float(i)*11.0
+		draw_colored_polygon(PackedVector2Array([Vector2(ix-4,44),Vector2(ix+4,44),Vector2(ix,58+fposmod(float(i)*5.0,7.0))]),Color("9a8a80"))
+	for i in range(11):
+		var tx: float = -60.0 + float(i)*12.0
+		var top_y: float = 35.0+absf(tx)*0.07
+		var length: float = 17.0+fposmod(float(i)*37.0,13.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(tx-5.5,top_y),Vector2(tx+5.5,top_y),Vector2(tx+fposmod(float(i)*3.0,4.0)-2.0,top_y+length)]),Color("e9dfd2"))
+	for i in range(9):
+		var bx: float = -48.0 + float(i)*12.0
+		var base_y: float = low+4.0-pow(absf(bx)/56.0,1.5)*(30.0+jaw*0.4)
+		var blen: float = 14.0+fposmod(float(i)*29.0,11.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(bx-5,base_y),Vector2(bx+5,base_y),Vector2(bx,base_y-blen)]),Color("d8cbbd"))
 	draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+
+func _claw(wrist: Vector2, side: float, spread: float) -> void:
+	# Mao de dedos compridos entrando pela lateral da tela.
+	var bone: Color = Color("8f8088")
+	draw_line(wrist+Vector2(side*260.0,60),wrist,bone.darkened(0.3),46.0)
+	draw_circle(wrist,34.0,bone.darkened(0.2))
+	for i in range(5):
+		var ang: float = (PI if side > 0.0 else 0.0) + (float(i)-2.0)*0.30*spread*side
+		var dir: Vector2 = Vector2.from_angle(ang)
+		var knuckle: Vector2 = wrist+dir*70.0
+		var tip: Vector2 = knuckle+dir.rotated(-0.5*side)*74.0
+		draw_line(wrist+dir*18.0,knuckle,bone,15.0)
+		draw_line(knuckle,tip,bone,11.0)
+		draw_circle(knuckle,8.5,bone.darkened(0.15))
+		draw_line(tip,tip+dir.rotated(-0.5*side)*26.0,Color("1c0a10"),7.0)
 
 func _draw_jumpscare() -> void:
 	var k: float = clampf(death_time/CFG.JUMPSCARE_SECONDS,0.0,1.0)
 	var flash: bool = fposmod(death_time*17.0,1.0) < 0.5
 	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.30,0.02,0.05) if (flash and k < 0.7) else Color(0.01,0.0,0.01))
 	var jitter: Vector2 = Vector2(randf_range(-1,1),randf_range(-1,1))*22.0*(1.0-k)
-	# A cara avanca de uma vez e continua crescendo ate estourar a tela.
+	# A cara avanca de uma vez, o maxilar despenca e ela continua crescendo
+	# ate engolir a tela, enquanto as maos fecham pelos lados.
 	var zoom: float = 1.15 + 2.3*pow(k,0.45)
-	_entity_face(Vector2(WIDTH*0.5,HEIGHT*0.5-10.0)+jitter,zoom,Color("f0457c"))
+	_entity_face(Vector2(WIDTH*0.5,HEIGHT*0.5-30.0-70.0*k)+jitter,zoom,Color("f0457c"),clampf(k*3.5,0.0,1.0))
+	var close: float = smoothstep(0.0,0.45,k)
+	for side in [-1.0, 1.0]:
+		_claw(Vector2(WIDTH*0.5+side*lerpf(760.0,330.0,close),HEIGHT*0.72)+jitter*0.5,side,1.0+0.5*sin(death_time*30.0))
 	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0,0,0,smoothstep(0.82,1.0,k)))
 
 # --------------------------- ABERTURA --------------------------------------
@@ -1293,30 +1779,40 @@ func _intro_glimpse(t: float) -> void:
 	var side: Vector2 = (target-hand).orthogonal().normalized()*(150.0 if lit else 120.0)
 	draw_colored_polygon(PackedVector2Array([hand,target-side,target+side]),Color(1.0,0.92,0.66,0.16 if lit else 0.10))
 	if lit:
-		_entity_face(figure,zoom,Color("c7f3ff"))
+		_entity_face(figure,zoom,Color("c7f3ff"),0.10)
 	else:
 		# No escuro so se ve o par de olhos, cada vez maior.
 		for sx in [-44.0, 44.0]:
-			draw_circle(figure+Vector2(sx,-26.0)*zoom,15.0*zoom,Color(0.96,0.30,0.52,0.9))
+			draw_circle(figure+Vector2(sx,-26.0)*zoom,15.0*zoom,Color(0.96,0.20,0.42,0.16))
+			draw_circle(figure+Vector2(sx,-26.0)*zoom,6.0*zoom,Color(1.0,0.26,0.46,0.95))
 	_center_text("Ela só anda quando ninguém a vê.",672,24,Color("d9cfc4"))
 
 func _intro_fragments(t: float) -> void:
-	# 3) Os tres fragmentos, um de cada vez, pulsando.
-	var names: Array = ["FOTOGRAFIA","CANÇÃO","REFLEXO"]
+	# 3) O altar e os tres trofeus: os silicones das mulheres sacrificadas.
+	var slab: Rect2 = Rect2(WIDTH*0.5-350.0,372.0,700.0,30.0)
+	draw_rect(Rect2(slab.position+Vector2(46,30),Vector2(608,96)),Color("100b10"))
+	draw_rect(slab,Color("231820"))
+	draw_line(slab.position,slab.position+Vector2(700,0),Color("4a3a44"),2.0)
+	var wet: float = clampf(t/3.2,0.0,1.0)
+	for i in range(11):
+		var dx: float = slab.position.x+38.0+float(i)*62.0
+		var run: float = (12.0+fposmod(float(i)*53.0,58.0))*wet
+		draw_line(Vector2(dx,374.0),Vector2(dx,402.0+run),Color("4a0b17"),3.0 if i%3 == 0 else 2.0)
+		draw_circle(Vector2(dx,402.0+run),2.4,Color("5c0f1d"))
 	for i in range(3):
 		var born: float = t-0.35-float(i)*0.95
 		if born < 0.0:
 			continue
-		var c: Vector2 = Vector2(WIDTH*0.5+(float(i)-1.0)*230.0,300.0)
+		var c: Vector2 = Vector2(WIDTH*0.5+(float(i)-1.0)*230.0,368.0)
 		var a: float = clampf(born/0.5,0.0,1.0)
 		var pulse: float = 0.5+0.5*sin(real_time*3.0-float(i)*1.2)
-		draw_circle(c,70.0+18.0*pulse,Color(1.0,0.78,0.40,0.07*a))
-		draw_circle(c,44.0+8.0*pulse,Color(1.0,0.82,0.48,0.10*a))
-		draw_colored_polygon(PackedVector2Array([c+Vector2(0,-44),c+Vector2(27,0),c+Vector2(0,44),c+Vector2(-27,0)]),Color(0.93,0.78,0.50,a))
-		draw_colored_polygon(PackedVector2Array([c+Vector2(0,-44),c+Vector2(27,0),c+Vector2(0,6)]),Color(1.0,0.93,0.74,a))
-		var w: float = ThemeDB.fallback_font.get_string_size(names[i],HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-		_world_txt(Vector2(c.x-w*0.5,392.0),names[i],13,Color(0.78,0.72,0.66,a))
-	_center_text("Três fragmentos do que ela foi. Uma única saída.",672,24,Color("d9cfc4"))
+		draw_circle(c+Vector2(0,-26),84.0+18.0*pulse,Color(1.0,0.58,0.72,0.06*a))
+		draw_circle(c+Vector2(0,-26),56.0+8.0*pulse,Color(1.0,0.66,0.78,0.09*a))
+		iso_renderer.gel(self,c,48.0,sin(real_time*4.2-float(i)*1.3)*(2.0+3.0*pulse),a)
+		var victim: String = str(VICTIMS[i]["name"])
+		var w: float = ThemeDB.fallback_font.get_string_size(victim,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x
+		_world_txt(Vector2(c.x-w*0.5,292.0),victim,14,Color(0.84,0.74,0.76,a))
+	_center_text("Três mulheres deitadas no altar. Ela guardou os silicones.",672,24,Color("d9cfc4"))
 
 func _intro_locked(t: float) -> void:
 	# 4) A porta bate. Corte para o jogo.

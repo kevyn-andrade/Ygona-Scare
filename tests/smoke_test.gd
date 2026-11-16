@@ -105,6 +105,111 @@ func _run() -> void:
         push_error("Teletransporte da entidade incorreto")
         quit(1)
         return
+    # Silicones das sacrificadas: um por vitima, com etiqueta legivel ao pegar.
+    if game.VICTIMS.size() != 3:
+        push_error("Deveriam existir tres vitimas")
+        quit(1)
+        return
+    var silicones: Array = game.scene_objects.filter(func(o): return o["kind"] == "fragment")
+    game.status = "playing"
+    game.library_open = true
+    game.player = silicones[0]["at"]
+    game._interact()
+    if game.collected_count() != 1 or game.status != "reading" or not str(game.reading["title"]).contains("DALVA"):
+        push_error("Pegar o silicone deveria abrir a etiqueta da vitima")
+        quit(1)
+        return
+    game._close_reading()
+    game.fragment_owned = [false,false,false]
+    game.library_open = false
+    # Rastro de sangue e coracao acompanham a entidade.
+    game.blood_trail = []
+    game.monster = game.tile(26,13)
+    game.trail_anchor = game.monster
+    game.player = game.tile(26,25)
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    game.monster_state = "RONDA"
+    for i in range(240):
+        game._update_monster(1.0/60.0)
+    if game.blood_trail.is_empty():
+        push_error("A entidade nao deixou rastro")
+        quit(1)
+        return
+    game.status = "playing"
+    game.monster = game.player + Vector2(60,0)
+    game._update_dread(0.016)
+    if game.dread < 0.5:
+        push_error("O pavor deveria crescer com a entidade perto")
+        quit(1)
+        return
+    # Aparicao falsa: surge fora da luz e estoura quando encarada.
+    game.player = game.tile(26,20)
+    game.monster = game.tile(45,5)
+    game.aim_override = Vector2(0,-1)
+    game.look = Vector2(0,-1)
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    var spawned: bool = false
+    for i in range(20):
+        if game._spawn_apparition():
+            spawned = true
+            break
+    if not spawned or game.music_duck < 0.9 or game.map.is_wall_at(game.apparition["at"]):
+        push_error("A aparicao falsa nao surgiu corretamente")
+        quit(1)
+        return
+    game.player = game.apparition["at"] + Vector2(20,0)
+    game._update_haunting(0.016)
+    if not game.apparition.is_empty() or game.glitch < 0.5:
+        push_error("A aparicao deveria estourar ao ser tocada")
+        quit(1)
+        return
+    # A luz nao segura a entidade para sempre: a sombra alcanca a lanterna.
+    game.player = game.tile(26,24)
+    game.monster = game.tile(26,20)
+    game.energy = 100.0
+    game.light_on = true
+    game.flashlight_pose = 1.0
+    game.light_jam = 0.0
+    game.freeze_time = 0.0
+    var jammed: bool = false
+    for i in range(int((game.shadow_seconds(128.0)+1.0)*60.0)):
+        game._update_monster(1.0/60.0)
+        if game.light_jam > 0.0:
+            jammed = true
+            break
+    if not jammed:
+        push_error("A sombra deveria apagar a lanterna depois de um tempo")
+        quit(1)
+        return
+    game.light_jam = 0.0
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    game.status = "playing"
+    # Esconder-se com ela olhando nao funciona.
+    game.player = game.hiding_places[0] + Vector2(0,30)
+    game.monster = game.player + Vector2(90,0)
+    game.monster_state = "PERSEGUINDO"
+    game._interact()
+    if not game.in_hiding or not game.hide_compromised:
+        push_error("Esconderijo deveria ficar comprometido com a entidade olhando")
+        quit(1)
+        return
+    game._interact()
+    game.monster = game.tile(45,5)
+    game.monster_state = "RONDA"
+    game.aim_override = Vector2.ZERO
+    # Regressao: laco ligado por codigo sem loop_end deixava todas as trilhas mudas.
+    for player in game.music.ambient_players + [game.music.stalker, game.music.theme, game.music.theme_reverse]:
+        if player.stream == null or player.stream.loop_end <= 0 or not player.playing:
+            push_error("Trilha em laco sem fim definido ou parada: %s" % player.name)
+            quit(1)
+            return
+    if game.fear_rect == null or game.music.theme.stream == null:
+        push_error("Filtro de pavor ou trilha de fundo ausentes")
+        quit(1)
+        return
     if game.mask_viewport == null or game.darkness_rect.material == null:
         push_error("Camada de escuridao ausente")
         quit(1)
@@ -116,5 +221,5 @@ func _run() -> void:
             push_error("Objetivo inacessivel: %s" % point)
             quit(1)
             return
-    print("YGONA SCARE: CENA, PROJECAO, CACHE, LANTERNA, ABERTURA, PULSOS E ROTAS OK")
+    print("YGONA SCARE: CENA, PROJECAO, CACHE, LANTERNA, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
     quit(0)

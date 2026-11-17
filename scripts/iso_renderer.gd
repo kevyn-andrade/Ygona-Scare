@@ -518,35 +518,106 @@ func _battery(at: Vector2) -> void:
     cv.draw_rect(Rect2(p+Vector2(10,-13),Vector2(3,6)),Color("f2e9bd"))
     cv.draw_line(p+Vector2(-3,-11),p+Vector2(4,-11),Color("205c54"),2.0)
 
+func _curve(ctrl: Array, steps: int = 6) -> PackedVector2Array:
+    ## Contorno fechado e arredondado que passa por todos os pontos de controle.
+    var out: PackedVector2Array = PackedVector2Array()
+    var n: int = ctrl.size()
+    for i in range(n):
+        var p0: Vector2 = ctrl[(i-1+n)%n]
+        var p1: Vector2 = ctrl[i]
+        var p2: Vector2 = ctrl[(i+1)%n]
+        var p3: Vector2 = ctrl[(i+2)%n]
+        for k in range(steps):
+            out.append(p1.cubic_interpolate(p2,p0,p3,float(k)/float(steps)))
+    return out
+
+func _shape(ctrl: Array, color: Color, outline: bool = true) -> void:
+    var pts: PackedVector2Array = _curve(ctrl)
+    cv.draw_colored_polygon(pts,color)
+    if outline:
+        # Contorno suavizado: esconde o serrilhado e separa as formas.
+        pts.append(pts[0])
+        cv.draw_polyline(pts,color.darkened(0.38),0.8,true)
+
+func _oval(center: Vector2, rx: float, ry: float, color: Color, rot: float = 0.0) -> void:
+    var pts: PackedVector2Array = PackedVector2Array()
+    for i in range(20):
+        var a: float = TAU*float(i)/20.0
+        pts.append(center+Vector2(cos(a)*rx,sin(a)*ry).rotated(rot))
+    cv.draw_colored_polygon(pts,color)
+
+func _limb(a: Vector2, b: Vector2, wa: float, wb: float, color: Color) -> void:
+    ## Membro afunilado com as pontas redondas (coxa, antebraco, mecha de cabelo).
+    var d: Vector2 = b-a
+    if d.length_squared() > 0.01:
+        var nrm: Vector2 = d.normalized().orthogonal()
+        cv.draw_colored_polygon(PackedVector2Array([a+nrm*wa,b+nrm*wb,b-nrm*wb,a-nrm*wa]),color)
+    cv.draw_circle(a,wa,color)
+    cv.draw_circle(b,wb,color)
+
 func _character() -> void:
     var center: Vector2 = screen(g.draw_player)
     if g.in_hiding:
         cv.draw_circle(center + Vector2(0,-9),7,Color("b9a9df"))
         return
     # A protagonista (adulta) e desenhada em escala maior, para o gesto ficar legivel.
+    # Formas curvas (splines, ovais e membros afunilados) em vez de blocos retos.
     cv.draw_set_transform(center, 0.0, Vector2(1.35,1.35))
-    var p: Vector2 = Vector2.ZERO
     var rate: float = 14.0 if g.running else 8.0
-    var step: float = sin(g.time_passed*rate) * (1.9 if g.moving else 0.0)
-    var bob: float = step + sin(g.real_time*2.1)*0.4          # passo + respiracao
-    var skin: Color = Color("bb806b")
-    var skin_shade: Color = Color("96604f")
-    var cloth: Color = Color("824b6e")
-    # Sombra e cabelo comprido caindo pelas costas.
-    poly([p+Vector2(-18,-1),p+Vector2(0,8),p+Vector2(18,-1),p+Vector2(0,-10)],Color(0,0,0,.42))
-    poly([p+Vector2(-13,-52+bob),p+Vector2(13,-52+bob),p+Vector2(17,-25+bob),p+Vector2(-17,-25+bob)],Color("211627"))
-    # Pernas e sapatos.
-    cv.draw_line(p+Vector2(-7,-12),p+Vector2(-7,-1+step),Color("23243d"),6.4)
-    cv.draw_line(p+Vector2(7,-12),p+Vector2(7,-1-step),Color("23243d"),6.4)
-    cv.draw_line(p+Vector2(-7,0),p+Vector2(-11,3),Color("101422"),5.0)
-    cv.draw_line(p+Vector2(7,0),p+Vector2(11,3),Color("101422"),5.0)
-    # Saia, cintura fina e blusa: silhueta em ampulheta.
-    poly([p+Vector2(-18,-10),p+Vector2(-9,-23+bob),p+Vector2(9,-23+bob),p+Vector2(18,-10)],Color("4a3c62"))
-    poly([p+Vector2(-9,-22+bob),p+Vector2(-15,-32+bob),p+Vector2(-11,-40+bob),p+Vector2(11,-40+bob),p+Vector2(15,-32+bob),p+Vector2(9,-22+bob)],Color("6e4668"))
-    cv.draw_line(p+Vector2(-9,-22.5+bob),p+Vector2(9,-22.5+bob),Color("2f2440"),2.0)
-    # Braco esquerdo em repouso.
-    cv.draw_line(p+Vector2(-13,-37+bob),p+Vector2(-18,-23+bob),Color("754a60"),6.0)
-    cv.draw_circle(p+Vector2(-18,-21+bob),2.9,skin)
+    var walk: float = 1.0 if g.moving else 0.0
+    var phase: float = g.time_passed*rate
+    var step: float = sin(phase)*walk
+    var bob: float = -absf(cos(phase))*1.4*walk + sin(g.real_time*2.1)*0.45   # passo + respiracao
+    var aim: Vector2 = Vector2((g.look.x-g.look.y)*SKEW_X,(g.look.x+g.look.y)*SKEW_Y).normalized()
+    if aim.length_squared()<0.01:
+        aim=Vector2.RIGHT
+    var turn: float = clampf(aim.x,-1.0,1.0)        # para que lado ela olha
+    var fear: float = clampf(g.dread,0.0,1.0)       # o rosto reage a entidade
+    var skin: Color = Color("c08570")
+    var skin_shade: Color = Color("9a6352")
+    var hair: Color = Color("1d1424")
+    var blouse: Color = Color("6e4668")
+    var cloth: Color = Color("864d71")
+    var sleeve: Color = Color("754a60")
+    var skirt: Color = Color("40335a")
+    var stocking: Color = Color("1f2036")
+    var boot: Color = Color("0f1220")
+    # Pernas longas: tudo acima do quadril fica 7 unidades mais alto.
+    var B: Vector2 = Vector2(0,bob-7.0)
+    _oval(Vector2(0,1),14.0,6.0,Color(0,0,0,.42))
+    # Cabelo comprido e ondulado caindo pelas costas, com balanco atrasado.
+    var hs: float = sin(phase-0.8)*1.6*walk + sin(g.real_time*1.3)*0.5
+    _shape([B+Vector2(-9,-64),B+Vector2(9,-64),B+Vector2(14,-52),B+Vector2(15+hs*0.4,-39),B+Vector2(12+hs,-27),B+Vector2(4+hs,-30),B+Vector2(-4+hs,-27),B+Vector2(-13+hs,-28),B+Vector2(-15+hs*0.4,-40),B+Vector2(-14,-52)],hair)
+    # Pernas torneadas, de meia escura e botas; o pe que avanca sai do chao.
+    for side in [-1.0, 1.0]:
+        var lift: float = maxf(0.0,step*side)*3.0
+        var fwd: float = step*side*2.2
+        var hip: Vector2 = B+Vector2(side*4.4,-24)
+        var knee: Vector2 = Vector2(side*4.7+fwd*0.4,-16.0-lift*0.5)
+        var ankle: Vector2 = Vector2(side*4.6+fwd*0.2,-2.6-lift)
+        _limb(hip,knee,3.6,2.7,stocking)
+        _limb(knee,ankle,2.7,1.9,stocking)
+        _limb(ankle+Vector2(0,-3.4),ankle+Vector2(0,0.6),2.7,2.7,boot)
+        _oval(ankle+Vector2(side*1.5,1.7),4.3,2.3,boot)
+    # Saia rodada que acompanha o passo.
+    var sk: float = step*1.3
+    _shape([B+Vector2(-7.5,-31),B+Vector2(7.5,-31),B+Vector2(10,-25),B+Vector2(12.5+sk,-17),B+Vector2(7+sk,-14.6),B+Vector2(0,-15.4),B+Vector2(-7+sk,-14.6),B+Vector2(-12.5+sk,-17),B+Vector2(-10,-25)],skirt)
+    for fx in [-4.0, 0.5, 4.5]:
+        cv.draw_line(B+Vector2(fx,-28),B+Vector2(fx*1.7+sk,-16.0),skirt.darkened(0.28),0.9,true)
+    cv.draw_line(B+Vector2(-11+sk,-17.2),B+Vector2(11+sk,-17.2),skirt.lightened(0.12),0.8,true)
+    # Tronco em ampulheta: ombros macios, cintura fina, quadril.
+    _shape([B+Vector2(-11,-46),B+Vector2(0,-47.5),B+Vector2(11,-46),B+Vector2(12,-40),B+Vector2(7.4,-32.5),B+Vector2(8,-29.5),B+Vector2(-8,-29.5),B+Vector2(-7.4,-32.5),B+Vector2(-12,-40)],blouse)
+    _limb(B+Vector2(-7.4,-30.4),B+Vector2(7.4,-30.4),1.4,1.4,Color("2a2038"))
+    _oval(B+Vector2(0,-30.4),1.7,1.5,Color("c9a15d"))
+    # Braco esquerdo solto, balancando ao contrario da perna.
+    var swing: float = -step*2.6
+    var lel: Vector2 = B+Vector2(-16.0+swing*0.3,-35.0)
+    var lhand: Vector2 = B+Vector2(-16.5+swing,-24.5)
+    _limb(B+Vector2(-12,-44),lel,3.3,2.7,sleeve)
+    _limb(lel,lhand,2.5,2.0,skin)
+    _oval(lhand+Vector2(0,1.4),2.3,2.8,skin)
+    # Pescoco e colo, visiveis no decote em V profundo.
+    _limb(B+Vector2(0,-50.5),B+Vector2(0,-45.5),2.7,3.2,skin_shade)
     # CINCO MOMENTOS DO GESTO:
     # 0%: lanterna completamente escondida no decote, mao na cintura;
     # 0-25%: a mao alcanca o meio do decote;
@@ -557,41 +628,54 @@ func _character() -> void:
     var reach: float = smoothstep(0.0,0.25,pose)
     var extract: float = smoothstep(0.25,0.60,pose)
     var extend: float = smoothstep(0.60,1.0,pose)
-    var aim: Vector2 = Vector2((g.look.x-g.look.y)*SKEW_X,(g.look.x+g.look.y)*SKEW_Y).normalized()
-    if aim.length_squared()<0.01:
-        aim=Vector2.RIGHT
-    var chest: Vector2 = p + Vector2(0,-30+bob)
+    var chest: Vector2 = B + Vector2(0,-39)
     var cleft: Vector2 = chest + Vector2(0,-3)               # onde a lanterna mora
     # Balanco atrasado em relacao ao passo, e os seios se afastam um pouco
     # enquanto a lanterna passa entre eles.
-    var sway: float = sin(g.time_passed*rate-1.1) * ((1.5 if g.running else 0.9) if g.moving else 0.0)
+    var sway: float = sin(phase-1.1) * (1.5 if g.running else 0.9) * walk
     var part: float = sin(clampf((pose-0.10)/0.52,0.0,1.0)*PI) * 1.7
-    # Pele do colo, visivel no decote em V profundo.
-    poly([chest+Vector2(-9,-10),chest+Vector2(9,-10),chest+Vector2(4,-2),chest+Vector2(0,3),chest+Vector2(-4,-2)],skin)
+    _shape([chest+Vector2(-8,-7.5),chest+Vector2(0,-8.6),chest+Vector2(8,-7.5),chest+Vector2(4.5,-1),chest+Vector2(0,3),chest+Vector2(-4.5,-1)],skin,false)
+    cv.draw_line(chest+Vector2(-6.5,-7.4),chest+Vector2(-1.6,-6.3),skin_shade,0.7,true)
+    cv.draw_line(chest+Vector2(6.5,-7.4),chest+Vector2(1.6,-6.3),skin_shade,0.7,true)
     # Enquanto e puxada, a haste sobe verticalmente por tras do busto.
     if pose > 0.28 and pose <= 0.60:
         _flashlight(cleft+Vector2(0,1.0),cleft+Vector2(0,-2.0-16.0*extract),false)
-    # Busto proeminente: sombra por baixo, pele no alto do decote, tecido e brilho.
+    # Busto proeminente e redondo: sombra por baixo, pele no alto do decote,
+    # tecido esticado, penumbra na curva de baixo e brilho em cima.
     for side in [-1.0, 1.0]:
-        var b: Vector2 = chest + Vector2(side*(7.8+part),-1.5+sway)
-        cv.draw_circle(b+Vector2(side*1.2,3.8),8.8,Color("4c2a45"))
-        cv.draw_circle(b,8.8,skin)
-        cv.draw_circle(b+Vector2(side*1.7,2.7),8.8,cloth)
-        cv.draw_circle(b+Vector2(side*3.4,0.6),3.1,Color(0.72,0.45,0.62,0.55))
-        cv.draw_arc(b+Vector2(side*1.7,2.7),8.8,-PI*0.5-side*1.25-0.55,-PI*0.5-side*1.25+0.55,8,Color("d79dae"),1.3)
-    cv.draw_line(cleft+Vector2(0,-3.5),cleft+Vector2(0,5.0+sway*0.5),skin_shade,1.4+part*0.5)
-    # Pescoço, rosto, olhos e cabelo.
-    cv.draw_line(p+Vector2(0,-43+bob),p+Vector2(0,-39+bob),Color("b77d69"),6)
-    cv.draw_circle(p+Vector2(0,-48+bob),12.2,Color("1a1425"))
-    cv.draw_circle(p+Vector2(0,-47+bob),9.1,skin)
-    poly([p+Vector2(-13,-52+bob),p+Vector2(-7,-62+bob),p+Vector2(6,-62+bob),p+Vector2(13,-52+bob),p+Vector2(5,-56+bob),p+Vector2(-6,-55+bob)],Color("241927"))
-    cv.draw_line(p+Vector2(-12,-50+bob),p+Vector2(-15,-34+bob),Color("261a33"),5.0)
-    cv.draw_line(p+Vector2(12,-50+bob),p+Vector2(15,-34+bob),Color("261a33"),5.0)
-    cv.draw_circle(p+Vector2(-3.3,-47+bob),1.3,Color("eee4dd"))
-    cv.draw_circle(p+Vector2(3.3,-47+bob),1.3,Color("eee4dd"))
-    cv.draw_line(p+Vector2(-2,-42+bob),p+Vector2(2,-42+bob),Color("8c2f48"),1.5)
+        var b: Vector2 = chest + Vector2(side*(7.6+part),-0.5+sway)
+        _oval(b+Vector2(side*1.0,3.7),8.7,8.2,Color("4c2a45"))
+        _oval(b,8.4,8.0,skin)
+        _oval(b+Vector2(side*1.6,2.6),8.5,8.0,cloth)
+        _oval(b+Vector2(side*1.8,6.2),6.6,3.4,Color(0.36,0.18,0.33,0.42))
+        _oval(b+Vector2(side*3.2,-0.4),3.6,2.6,Color(0.80,0.52,0.68,0.50),side*0.5)
+        cv.draw_arc(b+Vector2(side*1.6,2.6),8.3,-PI*0.5-side*1.25-0.6,-PI*0.5-side*1.25+0.6,10,Color("d79dae"),1.1,true)
+    cv.draw_line(cleft+Vector2(0,-3.5),cleft+Vector2(0,5.0+sway*0.5),skin_shade,1.2+part*0.5,true)
+    # Cabeca: rosto oval de queixo fino, virando de leve para onde ela mira.
+    var H: Vector2 = B+Vector2(turn*0.8,-56.5)
+    _shape([H+Vector2(-8.2,-3),H+Vector2(-7.6,3.5),H+Vector2(-4.2,8.2),H+Vector2(0,9.8),H+Vector2(4.2,8.2),H+Vector2(7.6,3.5),H+Vector2(8.2,-3),H+Vector2(5.5,-8.5),H+Vector2(0,-10),H+Vector2(-5.5,-8.5)],skin)
+    for side in [-1.0, 1.0]:
+        _oval(H+Vector2(side*4.8+turn,3.6),2.3,1.4,Color(0.86,0.36,0.42,0.20))
+        # Olhos amendoados; arregalam e as sobrancelhas sobem quando ela esta perto.
+        var e: Vector2 = H+Vector2(side*3.5+turn*1.3,-0.4)
+        var open: float = 1.0+0.6*fear
+        _oval(e,2.4,1.5*open,Color("f3ebe6"))
+        _oval(e+Vector2(turn*0.6,0.1),1.25,minf(1.4,1.25*open),Color("4a2f5e"))
+        cv.draw_circle(e+Vector2(turn*0.6,0.1),0.55,Color("0d0812"))
+        cv.draw_circle(e+Vector2(turn*0.6-0.45,-0.45),0.34,Color.WHITE)
+        cv.draw_polyline(PackedVector2Array([e+Vector2(-2.7,0.0),e+Vector2(-1.3,-1.55*open),e+Vector2(1.3,-1.55*open),e+Vector2(2.8,-0.3)]),hair,0.9,true)
+        cv.draw_line(e+Vector2(-side*1.9,-3.3-1.5*fear),e+Vector2(side*2.9,-3.9+0.3*fear),hair,1.0,true)
+    cv.draw_line(H+Vector2(turn*1.5,2.0),H+Vector2(turn*1.5+0.6,3.7),skin_shade,0.8,true)
+    _oval(H+Vector2(turn*1.2,6.1),1.9,0.8+1.0*fear,Color("8c2f48"))
+    if fear > 0.45:
+        _oval(H+Vector2(turn*1.2,6.2),1.1,0.7*fear,Color("2a0d16"))
+    # Cabelo da frente: topo arredondado, franja de lado e duas mechas nos ombros.
+    _shape([H+Vector2(-9.2,-1),H+Vector2(-9.6,-7),H+Vector2(-5.5,-12),H+Vector2(0,-13),H+Vector2(5.5,-12),H+Vector2(9.6,-7),H+Vector2(9.2,-1),H+Vector2(7.2,-5.5),H+Vector2(3,-8.2),H+Vector2(-1.5,-6.2),H+Vector2(-5,-7.5),H+Vector2(-7.6,-4)],hair)
+    cv.draw_polyline(PackedVector2Array([H+Vector2(-5.5,-10),H+Vector2(-1,-11.4),H+Vector2(4,-10.4)]),Color("3d2a4c"),0.9,true)
+    _limb(H+Vector2(-8.8,-2),B+Vector2(-10.5+hs*0.5,-41),2.3,1.5,hair)
+    _limb(H+Vector2(8.8,-2),B+Vector2(10.5+hs*0.5,-41),2.3,1.5,hair)
     # Braco direito: o ombro, o antebraco e os dedos acompanham o objeto.
-    var rest: Vector2 = p+Vector2(18,-21+bob)
+    var rest: Vector2 = B+Vector2(16.5-swing,-24.5)
     var raised: Vector2 = cleft+Vector2(0,-9.0*extract)
     var ready: Vector2 = cleft+aim*33.0+Vector2(3,-6)
     var hand: Vector2 = rest.lerp(cleft,reach)
@@ -599,14 +683,14 @@ func _character() -> void:
         hand=cleft.lerp(raised,extract)
     if pose > 0.60:
         hand=raised.lerp(ready,extend)
-    var shoulder: Vector2 = p+Vector2(13,-37+bob)
-    var elbow: Vector2 = shoulder.lerp(hand,0.51)+Vector2(7,6)
-    cv.draw_line(shoulder,elbow,Color("754a60"),7.0)
-    cv.draw_line(elbow,hand,Color("c38b78"),5.1)
+    var shoulder: Vector2 = B+Vector2(12,-44)
+    var elbow: Vector2 = shoulder.lerp(hand,0.51)+Vector2(6,5)
+    _limb(shoulder,elbow,3.3,2.7,sleeve)
+    _limb(elbow,hand,2.5,2.0,skin)
     # Ja fora do decote, a lanterna segue a mao e aponta para a mira.
     if pose > 0.60:
         _flashlight(hand-aim*3.0,hand+aim*15.0,g.light_on and pose > 0.86)
-    cv.draw_circle(hand,3.1,Color("daa18c"))
+    _oval(hand,2.7,2.4,Color("d39a85"))
     # Sem efeito de transformacao nos objetos e HUD desenhados em seguida.
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 

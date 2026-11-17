@@ -96,6 +96,21 @@ func _run() -> void:
         game.previous_player = game.player
         await _closeup("14_gesto_%d" % n, game.player, 5)
         n += 1
+    # Andando (dois tempos do passo) e com medo, para conferir as curvas.
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    game.moving = true
+    game.time_passed = 0.2
+    await _closeup("14_andando_0", game.player, 3)
+    game.time_passed = 0.6
+    game.aim_override = Vector2(-1,0.2)
+    game.look = game.aim_override.normalized()
+    game.dread = 0.9
+    await _closeup("14_andando_1", game.player, 3)
+    game.moving = false
+    game.dread = 0.0
+    game.aim_override = Vector2(1,1)
+    game.look = game.aim_override.normalized()
     # A entidade de perto: congelada na luz e perseguindo.
     game.monster = game.tile(28, 31)
     game.previous_monster = game.monster

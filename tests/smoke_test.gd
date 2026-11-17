@@ -221,5 +221,5 @@ func _run() -> void:
             push_error("Objetivo inacessivel: %s" % point)
             quit(1)
             return
-    print("YGONA SCARE: CENA, PROJECAO, CACHE, LANTERNA, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
+    print("AFRODITE SCARE: CENA, PROJECAO, CACHE, LANTERNA, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
     quit(0)

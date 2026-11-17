@@ -1,4 +1,6 @@
-# YGONA SCARE — jogo 2D de terror para Godot 4.7
+# AFRODITE SCARE — jogo 2D de terror para Godot 4.7
+
+**História:** uma seita tentou trazer a deusa **Afrodite** de volta por meio de bruxaria. O ritual ficou incompleto, e o que atravessou foi só metade dela: uma Afrodite rachada e apodrecida, que só anda quando ninguém a vê. Para se completar, ela guarda as oferendas tiradas de três mulheres sacrificadas no altar. Devolver essas oferendas ao altar desfaz a invocação.
 
 Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° (2.5D)**, criatura que congela sob luz branca, lanterna normal/espectral, três puzzles, perseguições e trilhas dinâmicas originais. Não é uma simples imagem ou vídeo: o ZIP contém um projeto editável do Godot.
 
@@ -25,14 +27,16 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 | Pausar | Esc |
 | Reaparecer após morte / reiniciar após vitória | R ou Enter |
 
+> **Touchpad parado enquanto anda?** Muitos sistemas (GNOME/Fedora, Windows) bloqueiam o touchpad enquanto uma tecla está pressionada. Quando o mouse fica parado e ela anda, a lanterna passa a seguir a direção do passo; basta mexer o mouse para voltar a mirar com ele. Para desligar o bloqueio no GNOME: `gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false`.
+
 ### Mudanças da versão original
 
-- **Nome:** de `Entre as Paredes` para **Ygona Scare** em `project.godot`, árvore de cena, menu e HUD.
+- **Nome:** de `Entre as Paredes` para **Afrodite Scare** em `project.godot`, árvore de cena, menu e HUD.
 - **Câmera:** sistema 2.5D isométrico a 45°, com paredes de altura aparente e fachadas agora sempre opacas.
 - **Protagonista:** personagem feminina procedural com cabelos longos e roupa roxa. Agora a lanterna desaparece completamente ao ser guardada, emerge do centro do decote por etapas e é erguida com a mão antes de acender. O gesto é estilizado, sem nudez.
 - **Controles:** as setas do teclado (↑ ↓ ← →) acompanham os eixos visuais da perspectiva, e a mira do mouse é convertida das coordenadas da tela para as do mundo.
-- **Entidade:** a criatura agora se chama **Ygona** dentro do jogo, representada como aparição abstrata. Ela fica paralisada somente sob **luz normal**, não sob luz espectral.
-- **Áudio:** música dinâmica original de proximidade `assets/audio/ygona_theme.wav`, além de quatro camadas de ambiente que intensificam com cada fragmento.
+- **Entidade:** a criatura é **Afrodite pela metade**, a deusa trazida por um ritual de bruxaria que não terminou. Ela fica paralisada somente sob **luz normal**, não sob luz espectral.
+- **Áudio:** música dinâmica original de proximidade `assets/audio/afrodite_theme.wav`, além de quatro camadas de ambiente que intensificam com cada fragmento.
 
 ## Como vencer
 
@@ -63,10 +67,12 @@ docs/visao_45_graus.png       # imagem conceitual ilustrativa
 
 - **Perspectiva:** pseudoisométrica 2:1 em geometria de desenho 2D; não é uma câmera 3D. A projeção não altera física ou AStar do mapa. Isso reduz complexidade e permite melhorar arte individualmente.
 - **Arte:** vetorial/procedural; não há imagens de terceiros nem sprites copiados. O personagem e a entidade são visualmente ficcionais.
+- **Cenário por cômodo:** cada cômodo tem piso e paredes próprios — biblioteca (tábuas, papel verde com arabescos, lambri, tapete verde), cozinha (ladrilhinho encardido, azulejo de metrô), quarto (tábuas, papel listrado com quadros, tapete persa), oficina (cimento com manchas, tijolo aparente), salão (mármore, papel bordô com filetes dourados, arandelas, passadeira até o altar), vestíbulo (xadrez preto e branco, lambri de madeira) e corredores (tábuas gastas, reboco descascando). Móveis e objetos são montados em volume: mesas com pernas e tampo de tábuas, estantes com lombadas, bancadas com portas e inox, cama com cabeceira e travesseiros, penteadeira com espelho oval, altar de pedra entalhado, guarda-roupas, atris com livro aberto, caixa de música com bailarina, chave, selos de pedra, envelope lacrado, vaso com flores murchas, pilhas e garrafa.
+- **Refazer o cache do cenário:** depois de mudar `bake_floor`/`bake_wall` em `iso_renderer.gd`, rode `godot --path . --script res://tools/bake_scenery.gd` (abre uma janela) e em seguida `godot --headless --path . --import`.
 - **Performance:** o cenário estático é cacheado em imagens de piso e camadas de paredes opacas, e as faixas fora da área visível não são desenhadas. As entidades móveis continuam ordenadas por profundidade.
 - **Comportamento da entidade:** patrulha, investigação, busca, perseguição e congelamento. O modo espectral atrai a criatura e não a paralisa.
 - **Áudio:** músicas e efeitos sintetizados para esta versão; não são usados trechos de memes, vídeos reais ou voz de nenhuma pessoa.
-- **Título:** referência cultural à influenciadora Ygona Moura; projeto de fã não oficial, não afiliado à sua família nem representante de sua imagem/voz. Caso seja publicado fora da disciplina, revisem também o uso do nome e eventuais direitos associados.
+- **Título:** Afrodite é uma figura da mitologia grega (domínio público). A versão do jogo é uma releitura original e fictícia; o projeto não faz referência a nenhuma pessoa real.
 - **Testes:** o pacote pode ser revisado estaticamente neste ambiente, mas sem o executável do Godot 4.7 não foi possível assegurar uma partida completa em execução. Se houver erros apontados pelo Godot, compartilhem o Debugger para uma correção focada.
 
 ## Equipe: próximas melhorias
@@ -112,12 +118,12 @@ Implementação dos itens do GDD que faltavam no protótipo. Todos os valores de
 | GDD | O que mudou |
 |---|---|
 | 3.2 Visão limitada | Fora do cone da lanterna a tela fica escura (`DARKNESS`). A luz respeita paredes; a protagonista enxerga só um pequeno halo ao redor de si. |
-| 3.3 Entidade | Jumpscare (imagem + áudio) no game over. Risada ao iniciar a perseguição. Olhos visíveis no escuro quando ela está muito perto. |
+| 3.3 Entidade | Jumpscare (imagem + áudio) no game over: o rosto bate na tela em 0,12 s, escuro, tremendo aos saltos, com chiado de TV (`shaders/jumpscare.gdshader` + `assets/audio/static.wav`), faixas rasgadas, aberração cromática e quadros em que o sinal cai. Risada ao iniciar a perseguição. Olhos visíveis no escuro quando ela está muito perto. |
 | 3.3 Habilidades | 1 fragmento: ela faz a lanterna **falhar** por instantes (a risada avisa antes). 2 fragmentos: **teletransporte curto** fora da luz. Ambas configuráveis/desligáveis. |
 | 3.4 Bateria | Alcance **e abertura** do cone encolhem abaixo de 60% de carga. A recarga com a lanterna guardada agora vai só até 30%. |
 | 3.5 Luz especial | A luz espectral (F) só é liberada ao pegar a **lente** no salão, depois do básico. |
 | 3.6 Fragmentos | Pulsam de tempos em tempos, visíveis no escuro (fora da tela, um clarão na borda aponta a direção). Pulsos mais fortes e frequentes com a entidade perto. |
-| 2.3 / 3.7 Abertura | Animação inicial (chegada de carro, vislumbre, fragmentos), vestíbulo **trancado e ainda iluminado**, carta da maldição, bilhete, chave sob o vaso, vultos, e **queda de luz** ao abrir a porta. A entidade só desperta alguns segundos depois, anunciada pela risada. |
+| 2.3 / 3.7 Abertura | Animação inicial (chegada de carro, vislumbre, fragmentos), vestíbulo **trancado e ainda iluminado**, carta sobre a invocação, bilhete, chave sob o vaso, vultos, e **queda de luz** ao abrir a porta. A entidade só desperta alguns segundos depois, anunciada pela risada. |
 | 5.2 Áudio | Camada ambiente mais alta e acelerada a cada fragmento; efeitos não se cortam mais. |
 
 ### Arquivos novos
@@ -141,15 +147,15 @@ tests/visual_check.gd      # captura telas de vários momentos para revisão
 | Tema | O que mudou |
 |---|---|
 | Protagonista | Redesenhada (adulta, vestida, sem nudez): busto mais proeminente, cintura marcada, colo à mostra no decote em V, respiração e marcha natural (quadril para a perna de apoio, ombros em contraposição, transição suave entre parar/andar/correr). O busto, grande e em forma de gota, tem física de mola amortecida: acompanha o passo com atraso, quica ao parar ou arrancar e balança quando a lanterna é tirada ou guardada. A lanterna sobe **por trás** do busto, que se afasta enquanto ela passa, e só então é erguida e apontada. Ao guardar, o gesto se inverte. |
-| Artefatos | Os três "fragmentos" agora são os **silicones das mulheres sacrificadas no altar da Ygona** — Dalva (biblioteca), Marlene (caixa de música) e Soraia (espelho), personagens fictícias. São próteses de gel que tremem e pulsam; ao pegar cada uma, abre-se a etiqueta com a história da vítima, e ela vai para o decote junto da lanterna. No código continuam se chamando `fragment_*`. |
-| Ygona | "Afrodite do mal": deusa de mármore rachado apodrecida no fundo do mar. Concha de Vênus partida como auréola, cabelo encharcado até os quadris, túnica grega em farrapos pingando água preta com algas, peito aberto e costurado, braços de estátua com unhas pretas compridas que se estendem na perseguição e pescoço quebrado que estala mesmo sob a luz. Metade do rosto ainda é bela (lábio pintado, cílios, esclera preta), a outra metade é osso, com a boca rasgada até a orelha. O mesmo rosto aparece no jumpscare (maxilar despencando, mãos de mármore fechando pelos lados), no menu e na tela de morte. Criatura fictícia, sem reproduzir o rosto de ninguém. |
-| Altar e ritual | Altar ensanguentado, com velas que seguram um resto de luz no escuro. No ritual, os silicones aparecem sobre o tampo e as três mulheres se erguem em volta para levar a Ygona. |
+| Artefatos | Os três "fragmentos" agora são os **silicones das mulheres oferecidas a Afrodite no altar da seita** — Dalva (biblioteca), Marlene (caixa de música) e Soraia (espelho), personagens fictícias. São próteses de gel que tremem e pulsam; ao pegar cada uma, abre-se a etiqueta com a história da vítima, e ela vai para o decote junto da lanterna. No código continuam se chamando `fragment_*`. |
+| Afrodite | Deusa pela metade, deformada porque o ritual não terminou: mármore rachado, como se tivesse apodrecido no fundo do mar. Concha de Vênus partida como auréola, cabelo encharcado até os quadris, túnica grega em farrapos pingando água preta com algas, peito aberto e costurado, braços de estátua com unhas pretas compridas que se estendem na perseguição e pescoço quebrado que estala mesmo sob a luz. Metade do rosto ainda é bela (lábio pintado, cílios, esclera preta), a outra metade é osso, com a boca rasgada até a orelha. O mesmo rosto aparece no jumpscare (maxilar despencando, mãos de mármore fechando pelos lados), no menu e na tela de morte. Criatura fictícia, sem reproduzir o rosto de ninguém. |
+| Altar e ritual | Altar ensanguentado, com velas que seguram um resto de luz no escuro. No ritual, os silicones aparecem sobre o tampo e as três mulheres se erguem em volta para levar Afrodite de volta ao mar. |
 | Pavor | Batimento cardíaco e vinheta vermelha que aceleram com a proximidade; sussurros das vítimas; rastro de sangue que a entidade deixa e que seca aos poucos (dá para rastreá-la com a lanterna); quatro frases escritas pelas vítimas, visíveis só na luz espectral. |
 | Correções | O tremor de câmera existia no código mas nunca era aplicado — agora treme na queda de luz e ao pegar um silicone. Caixas de aviso medem o texto de verdade (frases longas não vazam mais). Tela de vitória mostra quantas vezes você morreu. |
 
 - **Parâmetros novos** em `scripts/game_config.gd` (seção PAVOR): `HEART_RANGE`, `WHISPER_MIN/MAX`, `TRAIL_SPACING`, `TRAIL_SECONDS`.
 - **Áudio novo** (sintetizado por `tools/build_audio.py`): `heartbeat.wav` e `whisper.wav`.
-- **Testes:** `smoke_test.gd` cobre a etiqueta dos silicones, o rastro e o pavor; `visual_check.gd` grava closes do gesto da lanterna, da Ygona e do ritual, e não move mais o cursor do mouse.
+- **Testes:** `smoke_test.gd` cobre a etiqueta dos silicones, o rastro e o pavor; `visual_check.gd` grava closes do gesto da lanterna, de Afrodite e do ritual, e não move mais o cursor do mouse.
 
 ---
 
@@ -159,12 +165,12 @@ Tudo abaixo é ajustável na seção **ASSOMBRAÇÕES** de `scripts/game_config.
 
 | Tema | O que mudou |
 |---|---|
-| Trilha de fundo | `assets/audio/lullaby.wav`: tema **original** de caixinha de música — agudo, repetitivo, em 6/8, com duas vozes desafinadas batendo uma na outra. Toca o tempo todo; fica mais lento e grave a cada silicone, e a "fita mastiga" quando a Ygona se aproxima. **Quando a música se cala de repente, tem algo parado no escuro.** Não é a música de Lavender Town (composição protegida); para usar outra faixa a que você tenha direito, substitua o arquivo mantendo o nome. |
-| Aparições falsas | De tempos em tempos uma Ygona falsa fica parada fora da luz, com os mesmos olhos da verdadeira. Iluminada ou tocada, ela estoura: a lanterna falha, a imagem rasga e às vezes um rosto pisca na tela. |
+| Trilha de fundo | `assets/audio/lullaby.wav`: tema **original** de caixinha de música — agudo, repetitivo, em 6/8, com duas vozes desafinadas batendo uma na outra. Toca o tempo todo; fica mais lento e grave a cada silicone, e a "fita mastiga" quando Afrodite se aproxima. **Quando a música se cala de repente, tem algo parado no escuro.** Não é a música de Lavender Town (composição protegida); para usar outra faixa a que você tenha direito, substitua o arquivo mantendo o nome. |
+| Aparições falsas | De tempos em tempos uma Afrodite falsa fica parada fora da luz, com os mesmos olhos da verdadeira. Iluminada ou tocada, ela estoura: a lanterna falha, a imagem rasga e às vezes um rosto pisca na tela. |
 | A luz não segura para sempre | Enquanto ela está congelada, a **sombra dela rasteja pelo chão** até você. Se alcançar, a lanterna apaga por um instante. É preciso recuar, não só apontar. |
 | Esconderijo | De dentro do armário só se vê pelas frestas — e, se ela estiver perto, um olho passa do outro lado procurando. **Entrar no armário com ela te vendo não funciona:** ela vai até lá e te tira. |
 | Manequins da oficina | Só andam quando a luz não está neles. Param na beira do seu halo, com a cabeça virada para você e um braço apontando. Não ferem. |
-| As três penduradas | Dalva, Marlene e Soraia estão embrulhadas em lençóis e penduradas no salão. Balançam mais quando iluminadas; de perto, dá para ver os olhos. Somem quando a Ygona é levada. |
+| As três penduradas | Dalva, Marlene e Soraia estão embrulhadas em lençóis e penduradas no salão. Balançam mais quando iluminadas; de perto, dá para ver os olhos. Somem quando Afrodite é levada. |
 | Perseguição | Ela avança aos trancos, como um filme com quadros faltando. |
 | A casa | Rangidos, batidas na parede e coisas sendo arrastadas, em intervalos aleatórios. Ficar parada no escuro faz passos se aproximarem por trás, e alguém respira. |
 | Imagem | Filtro de pavor (`shaders/fear.gdshader`): granulado de filme, vinheta, cores drenadas e aberração cromática que pioram com a proximidade dela. |
@@ -177,7 +183,7 @@ Tudo abaixo é ajustável na seção **ASSOMBRAÇÕES** de `scripts/game_config.
 
 A caixinha de música passa por um barramento próprio (`Caixinha`) com efeitos controlados em `update_theme` (`scripts/music_director.gd`):
 
-- **Ao contrário:** conforme a Ygona se aproxima, a melodia normal cede lugar a `lullaby_reverse.wav`, a mesma faixa invertida e um pouco mais grave — as duas nunca afinam.
+- **Ao contrário:** conforme Afrodite se aproxima, a melodia normal cede lugar a `lullaby_reverse.wav`, a mesma faixa invertida e um pouco mais grave — as duas nunca afinam.
 - **Apodrecendo:** o som racha (bitcrush), enjoa (phaser), afunda (filtro com ressonância) e ganha eco e reverberação. A cada silicone fica um pouco pior de forma permanente.
 - **Mergulhos:** com ela perto, a altura escorrega de repente e volta devagar.
 - **Disco engasgado:** nos sustos (aparição, sombra na lanterna, falha de luz) a música repete o mesmo pedaço cada vez mais rápido.

@@ -1,6 +1,6 @@
 extends RefCounted
 class_name IsoRenderer
-## YGONA SCARE: apresentacao 2.5D projetada a 45 graus (losangos 2:1).
+## AFRODITE SCARE: apresentacao 2.5D projetada a 45 graus (losangos 2:1).
 ## A simulacao, as colisoes e o pathfinding continuam em coordenadas 2D.
 ## Toda a arte foi desenhada para o projeto com primitivas do Godot.
 
@@ -114,13 +114,7 @@ func _box(at: Vector2, width_world: float, depth_world: float, height: float, co
     cv.draw_line(b+lift,c+lift,Color(0.05,0.04,0.09,0.45*opacity),1.2)
 
 func _wall(x: int,y: int) -> void:
-    var pt: Vector2 = g.tile(x,y)
-    # Fachadas sempre opacas: nada fica translucido ao se aproximar.
-    var col: Color = Color("344051") if ((x*3+y*5)%7 > 1) else Color("3a4755")
-    _box(pt,32.0,32.0,WALL_HEIGHT,col)
-    if (x*5+y*7)%13 == 0:
-        var s: Vector2 = screen(pt)-Vector2(0,WALL_HEIGHT+10)
-        cv.draw_line(s-Vector2(6,0),s+Vector2(7,2),Color(0.6,0.63,0.69,.14),1.0)
+    bake_wall(x,y)
 
 func _floor() -> void:
     cv.draw_rect(Rect2(0,0,VIEW_WIDTH,VIEW_HEIGHT),Color("080d17"))
@@ -212,7 +206,7 @@ func _decals() -> void:
     cv.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 func _shadow_reach() -> void:
-    ## Enquanto a luz a segura, a sombra da Ygona rasteja pelo chao ate a jogadora.
+    ## Enquanto a luz a segura, a sombra de Afrodite rasteja pelo chao ate a jogadora.
     if not g.monster_present() or g.freeze_time <= 0.05:
         return
     var a: Vector2 = g.draw_monster
@@ -378,127 +372,8 @@ func gel(c: CanvasItem, at: Vector2, r: float, wobble: float = 0.0, alpha: float
     c.draw_circle(at+Vector2(wobble*0.4,-r*0.26),r*0.46,Color(0.86,0.60,0.68,0.35*alpha))
     c.draw_circle(at+Vector2(-r*0.34+wobble*0.6,-r*0.46),r*0.17,Color(1,1,1,0.80*alpha))
 
-func _scene_object(obj: Dictionary) -> void:
-    var p: Vector2 = screen(obj["at"])
-    var kind: String = obj["kind"]
-    if kind == "fragment":
-        # Os "fragmentos" sao os silicones das sacrificadas: tremem e pulsam.
-        var idx: int = int(obj["idx"])
-        var v: float = g.fragment_pulse(idx)
-        cv.draw_circle(p+Vector2(0,-8),17.0+7.0*v,Color(1.0,.70,.80,.08+.14*v))
-        gel(cv,p+Vector2(0,-2),11.0,sin(g.real_time*5.0+float(idx)*1.7)*(0.7+1.6*v))
-    elif kind == "key":
-        cv.draw_circle(p+Vector2(-7,-14),7,Color("e1bc79"),false,2.5)
-        cv.draw_line(p+Vector2(-1,-13),p+Vector2(12,-1),Color("e1bc79"),3.0)
-    elif kind == "book":
-        _box(obj["at"],20.0,14.0,7.0,Color("7d5261") if int(obj["number"]) % 2 else Color("4e7982"))
-        _text(p+Vector2(-6,-18),str(obj["number"]),11,Color("f6dfbb"))
-    elif kind == "seal":
-        cv.draw_circle(p+Vector2(0,-8),16.0,Color("b19be8") if obj["number"] in g.mirror_sequence else Color("72637c"))
-        cv.draw_circle(p+Vector2(0,-8),11.0,Color("32283b"))
-        _text(p+Vector2(-4,-3),str(obj["number"]),12,Color("f1e0ff"))
-    elif kind == "box":
-        _box(obj["at"],32.0,25.0,18.0,Color("ae8465"))
-        cv.draw_circle(p+Vector2(0,-24),4.0,Color("f6d8a1"))
-    elif kind == "letter":
-        # Carta em destaque sobre a mesa: o cenario aponta o que ler.
-        var lp: Vector2 = p+Vector2(0,-21)
-        poly([lp+Vector2(-11,0),lp+Vector2(0,-6),lp+Vector2(11,0),lp+Vector2(0,6)],Color("eadfc4") if not g.letter_read else Color("a59c8a"))
-        cv.draw_line(lp+Vector2(-4,0),lp+Vector2(4,0),Color("7b2f3d"),1.4)
-        if not g.letter_read:
-            cv.draw_circle(lp,13.0+2.5*sin(g.real_time*3.0),Color(1,.93,.72,.13))
-    elif kind == "note":
-        var np: Vector2 = p+Vector2(0,-2)
-        poly([np+Vector2(-8,0),np+Vector2(0,-4),np+Vector2(8,0),np+Vector2(0,4)],Color("d8ceb4") if not g.note_read else Color("94907f"))
-        cv.draw_line(np+Vector2(-3,0),np+Vector2(3,0),Color("5a5160"),1.0)
-    elif kind == "vase":
-        var vp: Vector2 = p+Vector2(0,-15)
-        poly([vp+Vector2(-7,-2),vp+Vector2(7,-2),vp+Vector2(5,-15),vp+Vector2(-5,-15)],Color("7f8fa6"))
-        cv.draw_line(vp+Vector2(-6,-9),vp+Vector2(6,-9),Color("b9c6d8"),1.2)
-        for fx in [-6,0,6]:
-            cv.draw_line(vp+Vector2(fx*0.4,-15),vp+Vector2(fx,-27),Color("4c5b3c"),1.6)
-            cv.draw_circle(vp+Vector2(fx,-28),3.0,Color("7a3148"))
-    elif kind == "door":
-        _box(obj["at"],32.0,32.0,WALL_HEIGHT,Color("6a4a3c"))
-        cv.draw_line(p+Vector2(-15,-28),p+Vector2(-15,-6),Color("3b2a25"),1.5)
-        cv.draw_circle(p+Vector2(-6,-16),2.6,Color("e1bc79") if g.foyer_key_owned else Color("8d7a5c"))
-    elif kind == "lens":
-        var la: float = 0.7+0.3*sin(g.real_time*3.4)
-        cv.draw_circle(p+Vector2(0,-12),15.0,Color(.62,.40,.98,.16*la))
-        cv.draw_arc(p+Vector2(0,-12),7.0,0,TAU,24,Color(.80,.66,1.0,la),2.4)
-        cv.draw_circle(p+Vector2(0,-12),3.0,Color("efe1ff"))
-    elif kind == "clue":
-        cv.draw_circle(p+Vector2(0,-19),19,Color(.64,.42,.96,.26))
-        cv.draw_arc(p+Vector2(0,-19),16,0,TAU,32,Color("bca1ff"),2.0)
-        _text(p+Vector2(-7,-13),"?",17,Color("f5deff"))
-
-func _furniture(obj: Dictionary) -> void:
-    _box(obj["at"],obj["w"],obj["d"],obj["h"],obj["c"])
-    var p: Vector2 = screen(obj["at"])
-    var kind: String = obj["kind"]
-    if kind == "shelf":
-        for i in range(3):
-            cv.draw_line(p+Vector2(-17+i*10,-obj["h"]-5),p+Vector2(-15+i*10,-obj["h"]+10),Color("a78e73"),3.0)
-    elif kind == "bed":
-        # Travesseiro, e alguma coisa respirando devagar debaixo do lencol.
-        var bt: Vector2 = p+Vector2(0,-obj["h"])
-        poly([bt+Vector2(-34,-12),bt+Vector2(-16,-21),bt+Vector2(-2,-14),bt+Vector2(-20,-5)],Color("c3b5c3"))
-        var breath: float = 1.0+0.13*sin(g.real_time*1.3)
-        cv.draw_set_transform(bt+Vector2(8,-1.0-2.0*breath),0.46,Vector2(1.0,0.55*breath))
-        cv.draw_circle(Vector2(2,0),13.0,Color("5b4670"))
-        cv.draw_circle(Vector2(0,-2),12.0,Color("7d6590"))
-        cv.draw_circle(Vector2(18,-1),8.0,Color("7d6590"))
-        cv.draw_circle(Vector2(-17,-2),6.5,Color("86709a"))
-        cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
-        poly([bt+Vector2(2,3),bt+Vector2(14,1),bt+Vector2(20,9),bt+Vector2(8,13)],Color(0.30,0.03,0.08,0.75))
-    elif kind == "butcher":
-        # Bancada da cozinha: mancha, cutelo cravado e um resto que ninguem recolheu.
-        var kt: Vector2 = p+Vector2(0,-obj["h"])
-        poly([kt+Vector2(-22,-5),kt+Vector2(-6,-10),kt+Vector2(12,-2),kt+Vector2(-2,6)],Color("3d0a14"))
-        poly([kt+Vector2(8,-4),kt+Vector2(16,-7),kt+Vector2(24,-1),kt+Vector2(14,4)],Color("5c1420"))
-        cv.draw_circle(kt+Vector2(16,-3),3.0,Color("7a2231"))
-        cv.draw_line(kt+Vector2(-14,-6),kt+Vector2(-9,-21),Color("4a3527"),3.0)
-        poly([kt+Vector2(-15,-6),kt+Vector2(-12,-15),kt+Vector2(-23,-13),kt+Vector2(-25,-5)],Color("aab3ba"))
-        cv.draw_line(kt+Vector2(-25,-5),kt+Vector2(-15,-6),Color("5c0f1d"),1.4)
-        # Ganchos pendurados do teto, um deles ainda pingando.
-        for hx in [-30.0, 30.0]:
-            var hook: Vector2 = kt+Vector2(hx,-46+sin(g.real_time*1.1+hx)*1.5)
-            cv.draw_line(hook+Vector2(0,-60),hook,Color("56515c"),1.2)
-            cv.draw_arc(hook+Vector2(0,4),4.0,-PI*0.5,PI,10,Color("8b8791"),1.6)
-        var drop: float = fposmod(g.real_time*0.7,1.0)
-        cv.draw_circle(kt+Vector2(-30,-36+drop*30.0),1.3,Color(0.42,0.04,0.09,1.0-drop))
-    elif kind == "mirror":
-        cv.draw_line(p+Vector2(-8,-obj["h"]-19),p+Vector2(8,-obj["h"]-8),Color("bed0d5"),4.0)
-        cv.draw_line(p+Vector2(0,-obj["h"]-20),p+Vector2(9,-obj["h"]-32),Color("a38abd"),3.0)
-    elif kind == "altar":
-        # Tampo empoçado de sangue velho, que escorre pelas duas fachadas.
-        var lift: Vector2 = Vector2(0,-obj["h"])
-        var top: Vector2 = p+lift
-        var hw: float = float(obj["w"])*0.5
-        var hd: float = float(obj["d"])*0.5
-        var left: Vector2 = screen(obj["at"]+Vector2(-hw,hd))+lift
-        var front: Vector2 = screen(obj["at"]+Vector2(hw,hd))+lift
-        var right: Vector2 = screen(obj["at"]+Vector2(hw,-hd))+lift
-        poly([top+Vector2(-24,-4),top+Vector2(-4,-10),top+Vector2(20,1),top+Vector2(8,10),top+Vector2(-9,5)],Color("3d0a14"))
-        poly([top+Vector2(-10,-3),top+Vector2(2,-6),top+Vector2(10,1),top+Vector2(0,5)],Color("5c0f1d"))
-        for f in [0.16,0.40,0.66,0.88]:
-            var s1: Vector2 = left.lerp(front,f)
-            cv.draw_line(s1,s1+Vector2(0,7.0+fposmod(f*37.0,1.0)*15.0),Color("4a0b17"),2.2)
-        for f in [0.28,0.62]:
-            var s2: Vector2 = right.lerp(front,f)
-            cv.draw_line(s2,s2+Vector2(0,6.0+fposmod(f*53.0,1.0)*13.0),Color("3a0812"),2.0)
-        # Argolas onde elas foram amarradas.
-        cv.draw_arc(left+Vector2(6,9),3.0,0,TAU,10,Color("8b8791"),1.3)
-        cv.draw_arc(right+Vector2(-6,9),3.0,0,TAU,10,Color("8b8791"),1.3)
-        if g.ritual_running or g.monster_banished:
-            for i in range(3):
-                gel(cv,top+Vector2(-18+i*18,-8+i*8),6.0,sin(g.real_time*7.0+float(i)*2.0)*0.8)
-
 func _hide_spot(at: Vector2) -> void:
-    _box(at,32.0,30.0,49.0,Color("676175"))
-    var p: Vector2 = screen(at)
-    cv.draw_line(p+Vector2(-5,-46),p+Vector2(-5,-12),Color("b6a8b1"),1.3)
-    cv.draw_circle(p+Vector2(5,-24),2.4,Color("d7c19c"))
+    _wardrobe(at)
 
 func _portal(at: Vector2) -> void:
     var p: Vector2 = screen(at)
@@ -510,13 +385,6 @@ func _portal(at: Vector2) -> void:
     cv.draw_circle(p+Vector2(0,-17),21,Color(.51,.25,.93,.16*a))
     cv.draw_arc(p+Vector2(0,-17),18.0,0,TAU,40,Color(.77,.60,1.0,a),3.1)
     cv.draw_line(p+Vector2(-7,-25),p+Vector2(7,-10),Color("dcc2ff"),2.0)
-
-func _battery(at: Vector2) -> void:
-    var p: Vector2 = screen(at)
-    cv.draw_circle(p+Vector2(0,-11),13.0,Color(.30,1.0,.76,.14))
-    cv.draw_rect(Rect2(p+Vector2(-11,-17),Vector2(21,14)),Color("6bdfb1"))
-    cv.draw_rect(Rect2(p+Vector2(10,-13),Vector2(3,6)),Color("f2e9bd"))
-    cv.draw_line(p+Vector2(-3,-11),p+Vector2(4,-11),Color("205c54"),2.0)
 
 func _curve(ctrl: Array, steps: int = 6) -> PackedVector2Array:
     ## Contorno fechado e arredondado que passa por todos os pontos de controle.
@@ -531,9 +399,55 @@ func _curve(ctrl: Array, steps: int = 6) -> PackedVector2Array:
             out.append(p1.cubic_interpolate(p2,p0,p3,float(k)/float(steps)))
     return out
 
+func strand(c: CanvasItem, ctrl: Array, w0: float, w1: float, color: Color, steps: int = 5) -> void:
+    ## Mecha de cabelo: curva suave (Catmull-Rom) que afina ate a ponta.
+    ## Montada como faixa de triangulos, sem triangulacao automatica, entao
+    ## curvas fortes nunca "somem" por poligono invalido.
+    var n: int = ctrl.size()
+    if n < 2:
+        return
+    var pts: PackedVector2Array = PackedVector2Array()
+    for i in range(n-1):
+        var p0: Vector2 = ctrl[maxi(i-1,0)]
+        var p1: Vector2 = ctrl[i]
+        var p2: Vector2 = ctrl[i+1]
+        var p3: Vector2 = ctrl[mini(i+2,n-1)]
+        for k in range(steps):
+            pts.append(p1.cubic_interpolate(p2,p0,p3,float(k)/float(steps)))
+    pts.append(ctrl[n-1])
+    var m: int = pts.size()
+    var verts: PackedVector2Array = PackedVector2Array()
+    var cols: PackedColorArray = PackedColorArray()
+    var idx: PackedInt32Array = PackedInt32Array()
+    for i in range(m):
+        var d: Vector2 = pts[mini(i+1,m-1)]-pts[maxi(i-1,0)]
+        var nrm: Vector2 = d.normalized().orthogonal() if d.length_squared() > 0.0001 else Vector2.RIGHT
+        var f: float = float(i)/float(m-1)
+        # Grossa na raiz, afina devagar e so fecha mesmo na ponta.
+        var w: float = lerpf(w0,w1,f*f)
+        verts.append(pts[i]+nrm*w)
+        verts.append(pts[i]-nrm*w)
+        cols.append(color)
+        cols.append(color)
+        if i > 0:
+            var a: int = (i-1)*2
+            idx.append_array([a,a+1,a+2,a+1,a+3,a+2])
+    RenderingServer.canvas_item_add_triangle_array(c.get_canvas_item(),idx,verts,cols)
+
 func _shape(ctrl: Array, color: Color, outline: bool = true) -> void:
     var pts: PackedVector2Array = _curve(ctrl)
-    cv.draw_colored_polygon(pts,color)
+    # Triangula aqui: se a curva suave se cruzar em alguma volta fechada,
+    # usa o contorno dos pontos de controle em vez de nao desenhar nada.
+    var idx: PackedInt32Array = Geometry2D.triangulate_polygon(pts)
+    if idx.is_empty():
+        pts = PackedVector2Array(ctrl)
+        idx = Geometry2D.triangulate_polygon(pts)
+        if idx.is_empty():
+            return
+    var cols: PackedColorArray = PackedColorArray()
+    cols.resize(pts.size())
+    cols.fill(color)
+    RenderingServer.canvas_item_add_triangle_array(cv.get_canvas_item(),idx,pts,cols)
     if outline:
         # Contorno suavizado: esconde o serrilhado e separa as formas.
         pts.append(pts[0])
@@ -625,7 +539,8 @@ func _character() -> void:
     var dt: float = _anim_step()
     # A protagonista (adulta) e desenhada em escala maior, para o gesto ficar legivel.
     # Formas curvas (splines, ovais e membros afunilados) em vez de blocos retos.
-    cv.draw_set_transform(center, 0.0, Vector2(1.35,1.35))
+    const BODY_SCALE: float = 1.35
+    cv.draw_set_transform(center, 0.0, Vector2(BODY_SCALE,BODY_SCALE))
     # Marcha: a amplitude e a cadencia mudam aos poucos, sem trancos ao parar,
     # arrancar ou passar de andar para correr.
     _gait_amt = move_toward(_gait_amt, 1.0 if g.moving else 0.0, dt*5.0)
@@ -649,55 +564,71 @@ func _character() -> void:
     var skin: Color = Color("c08570")
     var skin_shade: Color = Color("9a6352")
     var hair: Color = Color("1d1424")
+    var hair_mid: Color = Color("2a1d34")
+    var hair_sheen: Color = Color(0.42,0.32,0.52,0.55)
     var blouse: Color = Color("6e4668")
     var cloth: Color = Color("864d71")
     var sleeve: Color = Color("754a60")
     var skirt: Color = Color("40335a")
     var stocking: Color = Color("1f2036")
     var boot: Color = Color("0f1220")
+    # Proporcoes: cabeca menor (HK) e pescoco um pouco mais longo, ombros e
+    # quadril com a mesma largura, cintura marcada e busto proporcional.
+    const HK: float = 0.86
     # Pernas longas: tudo acima do quadril fica 7 unidades mais alto.
     # L = quadril (balanca para o apoio), U = tronco/ombros (contrapoe).
     var B: Vector2 = Vector2(0,bob-7.0)
     var L: Vector2 = B+Vector2(hipx,0)
     var U: Vector2 = B+Vector2(shx,0)
+    var H: Vector2 = U+Vector2(turn*0.8+shx*0.3,-58.0)
     _oval(Vector2(hipx*0.3,1),14.0,6.0,Color(0,0,0,.42))
-    # Cabelo comprido e ondulado caindo pelas costas, com balanco atrasado.
+    # Cabelo comprido por tras: volume na nuca e mechas onduladas de tamanhos
+    # diferentes, que afinam na ponta e balancam com atraso em relacao ao passo.
     var hs: float = sin(phase-0.8)*lerpf(1.6,2.4,run)*walk + sin(g.real_time*1.3)*0.5
-    _shape([U+Vector2(-9,-64),U+Vector2(9,-64),U+Vector2(14,-52),U+Vector2(15+hs*0.4,-39),U+Vector2(12+hs,-27),U+Vector2(4+hs,-30),U+Vector2(-4+hs,-27),U+Vector2(-13+hs,-28),U+Vector2(-15+hs*0.4,-40),U+Vector2(-14,-52)],hair)
+    _oval(H+Vector2(0,-1.0)*HK,11.0*HK,11.5*HK,hair)
+    _shape([H+Vector2(-10.5,-2)*HK,H+Vector2(10.5,-2)*HK,U+Vector2(12.5,-45),U+Vector2(-12.5,-45)],hair,false)
+    for i in range(9):
+        var u: float = float(i)/8.0
+        var rx: float = lerpf(-11.5,11.5,u)
+        var hlen: float = 22.0+fposmod(float(i)*13.7,7.0)
+        var wv: float = sin(g.real_time*1.4+float(i)*0.8)*0.5
+        var flare: float = (u-0.5)*4.5
+        var root: Vector2 = H+Vector2(rx*0.85,-1.0)*HK
+        strand(cv,[root,U+Vector2(rx+flare*0.3,-47),U+Vector2(rx+flare*0.7+hs*0.5+sin(float(i)*2.4)*0.7,-47+hlen*0.5),U+Vector2(rx+flare+hs+wv,-47+hlen)],2.6,0.25,hair if i%3 != 1 else hair_mid)
     # Pernas torneadas, de meia escura e botas. A perna que avanca dobra o
     # joelho e tira o pe do chao; a de apoio fica quase esticada.
     for side in [-1.0, 1.0]:
         var swing_leg: float = maxf(0.0,step*side)
         var lift: float = swing_leg*lerpf(3.0,4.6,run)
         var fwd: float = step*side*lerpf(2.2,3.0,run)
-        var hip: Vector2 = L+Vector2(side*4.4,-24)
-        var knee: Vector2 = Vector2(side*4.7+hipx*0.5+fwd*0.5,-16.0-lift*0.6)
-        var ankle: Vector2 = Vector2(side*4.6+fwd*0.2,-2.6-lift)
-        _limb(hip,knee,3.6,2.7,stocking)
-        _limb(knee,ankle,2.7,1.9,stocking)
-        _limb(ankle+Vector2(0,-3.4),ankle+Vector2(0,0.6),2.7,2.7,boot)
-        _oval(ankle+Vector2(side*1.5,1.7),4.3,2.3,boot)
+        var hip: Vector2 = L+Vector2(side*4.6,-24)
+        var knee: Vector2 = Vector2(side*4.6+hipx*0.5+fwd*0.5,-16.0-lift*0.6)
+        var ankle: Vector2 = Vector2(side*4.4+fwd*0.2,-2.6-lift)
+        _limb(hip,knee,3.7,2.5,stocking)
+        _limb(knee,ankle,2.5,1.6,stocking)
+        _limb(ankle+Vector2(0,-3.4),ankle+Vector2(0,0.6),2.5,2.5,boot)
+        _oval(ankle+Vector2(side*1.4,1.7),4.0,2.1,boot)
     # Saia rodada: segue o quadril e a barra acompanha com atraso, como tecido.
     var sk: float = sin(phase-0.6)*lerpf(1.4,2.0,run)*walk
-    _shape([L+Vector2(-7.5,-31),L+Vector2(7.5,-31),L+Vector2(10,-25),L+Vector2(12.5+sk,-17),L+Vector2(7+sk,-14.6),L+Vector2(0,-15.4),L+Vector2(-7+sk,-14.6),L+Vector2(-12.5+sk,-17),L+Vector2(-10,-25)],skirt)
+    _shape([L+Vector2(-7.8,-31),L+Vector2(7.8,-31),L+Vector2(11,-25),L+Vector2(13+sk,-17),L+Vector2(7+sk,-14.6),L+Vector2(0,-15.4),L+Vector2(-7+sk,-14.6),L+Vector2(-13+sk,-17),L+Vector2(-11,-25)],skirt)
     for fx in [-4.0, 0.5, 4.5]:
         cv.draw_line(L+Vector2(fx,-28),L+Vector2(fx*1.7+sk,-16.0),skirt.darkened(0.28),0.9,true)
-    cv.draw_line(L+Vector2(-11+sk,-17.2),L+Vector2(11+sk,-17.2),skirt.lightened(0.12),0.8,true)
+    cv.draw_line(L+Vector2(-11.5+sk,-17.2),L+Vector2(11.5+sk,-17.2),skirt.lightened(0.12),0.8,true)
     # Tronco em ampulheta: ombros (U) e quadril (L) se movem em sentidos opostos.
     var W: Vector2 = B+Vector2((hipx+shx)*0.5,0)
-    _shape([U+Vector2(-11,-46),U+Vector2(0,-47.5),U+Vector2(11,-46),U+Vector2(12,-40),W+Vector2(7.4,-32.5),L+Vector2(8,-29.5),L+Vector2(-8,-29.5),W+Vector2(-7.4,-32.5),U+Vector2(-12,-40)],blouse)
-    _limb(L+Vector2(-7.4,-30.4),L+Vector2(7.4,-30.4),1.4,1.4,Color("2a2038"))
+    _shape([U+Vector2(-10.5,-46),U+Vector2(0,-47.5),U+Vector2(10.5,-46),U+Vector2(11,-40),W+Vector2(6.8,-32.5),L+Vector2(8,-29.5),L+Vector2(-8,-29.5),W+Vector2(-6.8,-32.5),U+Vector2(-11,-40)],blouse)
+    _limb(L+Vector2(-7.2,-30.4),L+Vector2(7.2,-30.4),1.4,1.4,Color("2a2038"))
     _oval(L+Vector2(0,-30.4),1.7,1.5,Color("c9a15d"))
     # Braco esquerdo solto, balancando ao contrario da perna (um pouco atrasado);
     # correndo, o cotovelo dobra e a mao sobe.
     var swing: float = -sin(phase-0.25)*walk*lerpf(2.6,3.6,run)
-    var lel: Vector2 = U+Vector2(-16.0+swing*0.3,-35.0+run*1.2)
-    var lhand: Vector2 = U+Vector2(-16.5+swing,-24.5-run*5.0)
-    _limb(U+Vector2(-12,-44),lel,3.3,2.7,sleeve)
-    _limb(lel,lhand,2.5,2.0,skin)
-    _oval(lhand+Vector2(0,1.4),2.3,2.8,skin)
+    var lel: Vector2 = U+Vector2(-15.0+swing*0.3,-35.0+run*1.2)
+    var lhand: Vector2 = U+Vector2(-15.5+swing,-24.5-run*5.0)
+    _limb(U+Vector2(-11,-44),lel,3.0,2.4,sleeve)
+    _limb(lel,lhand,2.3,1.7,skin)
+    _oval(lhand+Vector2(0,1.3),2.0,2.6,skin)
     # Pescoco e colo, visiveis no decote em V profundo.
-    _limb(U+Vector2(0,-50.5),U+Vector2(0,-45.5),2.7,3.2,skin_shade)
+    _limb(U+Vector2(0,-51.5),U+Vector2(0,-45.5),2.4,3.0,skin_shade)
     # CINCO MOMENTOS DO GESTO:
     # 0%: lanterna completamente escondida no decote, mao na cintura;
     # 0-25%: a mao alcanca o meio do decote;
@@ -708,76 +639,101 @@ func _character() -> void:
     var reach: float = smoothstep(0.0,0.25,pose)
     var extract: float = smoothstep(0.25,0.60,pose)
     var extend: float = smoothstep(0.60,1.0,pose)
-    var chest: Vector2 = U + Vector2(0,-39.0-breath*0.25)
-    var cleft: Vector2 = chest + Vector2(0,-3)               # onde a lanterna mora
+    var chest: Vector2 = U + Vector2(0,-38.5-breath*0.25)
+    var cleft: Vector2 = chest + Vector2(0,-2.6)             # onde a lanterna mora
     # Enquanto a lanterna passa, os seios se afastam e sao erguidos um pouco;
     # a mola (fisica) faz eles voltarem balancando quando ela sai ou entra.
-    var part: float = sin(clampf((pose-0.10)/0.52,0.0,1.0)*PI) * 1.6
-    var lift_up: float = -sin(clampf((pose-0.25)/0.35,0.0,1.0)*PI) * 1.2
-    _simulate_bust(dt, project(g.draw_player)/1.35 + Vector2(shx,bob), part, lift_up)
+    var part: float = sin(clampf((pose-0.10)/0.52,0.0,1.0)*PI) * 1.4
+    var lift_up: float = -sin(clampf((pose-0.25)/0.35,0.0,1.0)*PI) * 1.1
+    _simulate_bust(dt, project(g.draw_player)/BODY_SCALE + Vector2(shx,bob), part, lift_up)
     var o_avg: float = (_bust_off[0].y+_bust_off[1].y)*0.5
-    _shape([chest+Vector2(-8,-7.5),chest+Vector2(0,-8.6),chest+Vector2(8,-7.5),chest+Vector2(4.5,-1),chest+Vector2(0,3),chest+Vector2(-4.5,-1)],skin,false)
-    cv.draw_line(chest+Vector2(-6.5,-7.4),chest+Vector2(-1.6,-6.3),skin_shade,0.7,true)
-    cv.draw_line(chest+Vector2(6.5,-7.4),chest+Vector2(1.6,-6.3),skin_shade,0.7,true)
+    _shape([chest+Vector2(-7.5,-7.2),chest+Vector2(0,-8.4),chest+Vector2(7.5,-7.2),chest+Vector2(4.2,-1),chest+Vector2(0,2.6),chest+Vector2(-4.2,-1)],skin,false)
+    cv.draw_line(chest+Vector2(-6.2,-7.1),chest+Vector2(-1.6,-6.1),skin_shade,0.7,true)
+    cv.draw_line(chest+Vector2(6.2,-7.1),chest+Vector2(1.6,-6.1),skin_shade,0.7,true)
     # Enquanto e puxada, a haste sobe verticalmente por tras do busto.
     if pose > 0.28 and pose <= 0.60:
         _flashlight(cleft+Vector2(0,1.0),cleft+Vector2(0,-2.0-16.0*extract),false)
-    # Busto grande e natural: forma de gota, peso embaixo, levemente para fora.
-    # Estica e achata conforme a velocidade da mola.
+    # Busto grande, mas em proporcao com ombros e quadril: forma de gota, peso
+    # embaixo, levemente para fora. Estica e achata conforme a velocidade da mola.
     for i in range(2):
         var side: float = -1.0 if i == 0 else 1.0
         var o: Vector2 = _bust_off[i]
         var st: float = clampf((_bust_vel[i] as Vector2).y*0.004,-0.08,0.08)
-        var b: Vector2 = chest + Vector2(side*7.2,0.6) + o
-        var rx: float = 7.7*(1.0-st*0.5)
-        var ry: float = 7.4*(1.0+st)
-        _breast(b+Vector2(side*0.9,3.4),rx+0.3,ry+0.2,side,Color("4c2a45"))
+        var b: Vector2 = chest + Vector2(side*6.3,0.6) + o
+        var rx: float = 6.7*(1.0-st*0.5)
+        var ry: float = 6.5*(1.0+st)
+        _breast(b+Vector2(side*0.8,3.0),rx+0.3,ry+0.2,side,Color("4c2a45"))
         _breast(b,rx,ry,side,skin)
-        _breast(b+Vector2(side*1.3,2.3),rx,ry*0.97,side,cloth)
-        _oval(b+Vector2(side*1.7,5.8),5.6,2.7,Color(0.36,0.18,0.33,0.40))
-        _oval(b+Vector2(side*2.7,-0.2)+o*0.2,3.2,2.2,Color(0.80,0.52,0.68,0.45),side*0.5)
-        cv.draw_arc(b+Vector2(side*1.3,2.3),rx-0.2,-PI*0.5-side*1.25-0.55,-PI*0.5-side*1.25+0.55,10,Color("d79dae"),1.0,true)
-    cv.draw_line(cleft+Vector2(0,-3.5),cleft+Vector2(0,5.0+o_avg*0.6),skin_shade,1.2+part*0.4,true)
-    # Cabeca: rosto oval de queixo fino, virando de leve para onde ela mira.
-    var H: Vector2 = U+Vector2(turn*0.8+shx*0.3,-56.5)
-    _shape([H+Vector2(-8.2,-3),H+Vector2(-7.6,3.5),H+Vector2(-4.2,8.2),H+Vector2(0,9.8),H+Vector2(4.2,8.2),H+Vector2(7.6,3.5),H+Vector2(8.2,-3),H+Vector2(5.5,-8.5),H+Vector2(0,-10),H+Vector2(-5.5,-8.5)],skin)
+        _breast(b+Vector2(side*1.1,2.0),rx,ry*0.97,side,cloth)
+        _oval(b+Vector2(side*1.5,5.0),4.9,2.4,Color(0.36,0.18,0.33,0.40))
+        _oval(b+Vector2(side*2.3,-0.2)+o*0.2,2.8,1.9,Color(0.80,0.52,0.68,0.45),side*0.5)
+        cv.draw_arc(b+Vector2(side*1.1,2.0),rx-0.2,-PI*0.5-side*1.25-0.55,-PI*0.5-side*1.25+0.55,10,Color("d79dae"),1.0,true)
+    cv.draw_line(cleft+Vector2(0,-3.2),cleft+Vector2(0,4.4+o_avg*0.6),skin_shade,1.1+part*0.4,true)
+    # ---------------- CABECA (coordenadas locais do rosto) ----------------
+    cv.draw_set_transform(center+H*BODY_SCALE, 0.0, Vector2(BODY_SCALE*HK,BODY_SCALE*HK))
+    # Rosto em formato de coracao: macas cheias, queixo delicado.
+    _shape([Vector2(-8.2,-3.5),Vector2(-7.9,1.5),Vector2(-6.4,5.6),Vector2(-3.4,8.7),Vector2(0,9.8),Vector2(3.4,8.7),Vector2(6.4,5.6),Vector2(7.9,1.5),Vector2(8.2,-3.5),Vector2(5.8,-8.8),Vector2(0,-10.2),Vector2(-5.8,-8.8)],skin,false)
+    _oval(Vector2(turn*0.8,8.4),3.0,0.9,Color(0.55,0.30,0.26,0.20))          # sombra sob o queixo
     for side in [-1.0, 1.0]:
-        _oval(H+Vector2(side*4.8+turn,3.6),2.3,1.4,Color(0.86,0.36,0.42,0.20))
-        # Olhos amendoados; arregalam e as sobrancelhas sobem quando ela esta perto.
-        var e: Vector2 = H+Vector2(side*3.5+turn*1.3,-0.4)
-        var open: float = 1.0+0.6*fear
-        _oval(e,2.4,1.5*open,Color("f3ebe6"))
-        _oval(e+Vector2(turn*0.6,0.1),1.25,minf(1.4,1.25*open),Color("4a2f5e"))
-        cv.draw_circle(e+Vector2(turn*0.6,0.1),0.55,Color("0d0812"))
-        cv.draw_circle(e+Vector2(turn*0.6-0.45,-0.45),0.34,Color.WHITE)
-        cv.draw_polyline(PackedVector2Array([e+Vector2(-2.7,0.0),e+Vector2(-1.3,-1.55*open),e+Vector2(1.3,-1.55*open),e+Vector2(2.8,-0.3)]),hair,0.9,true)
-        cv.draw_line(e+Vector2(-side*1.9,-3.3-1.5*fear),e+Vector2(side*2.9,-3.9+0.3*fear),hair,1.0,true)
-    cv.draw_line(H+Vector2(turn*1.5,2.0),H+Vector2(turn*1.5+0.6,3.7),skin_shade,0.8,true)
-    _oval(H+Vector2(turn*1.2,6.1),1.9,0.8+1.0*fear,Color("8c2f48"))
-    if fear > 0.45:
-        _oval(H+Vector2(turn*1.2,6.2),1.1,0.7*fear,Color("2a0d16"))
-    # Cabelo da frente: topo arredondado, franja de lado e duas mechas nos ombros.
-    _shape([H+Vector2(-9.2,-1),H+Vector2(-9.6,-7),H+Vector2(-5.5,-12),H+Vector2(0,-13),H+Vector2(5.5,-12),H+Vector2(9.6,-7),H+Vector2(9.2,-1),H+Vector2(7.2,-5.5),H+Vector2(3,-8.2),H+Vector2(-1.5,-6.2),H+Vector2(-5,-7.5),H+Vector2(-7.6,-4)],hair)
-    cv.draw_polyline(PackedVector2Array([H+Vector2(-5.5,-10),H+Vector2(-1,-11.4),H+Vector2(4,-10.4)]),Color("3d2a4c"),0.9,true)
-    _limb(H+Vector2(-8.8,-2),U+Vector2(-10.5+hs*0.5,-41),2.3,1.5,hair)
-    _limb(H+Vector2(8.8,-2),U+Vector2(10.5+hs*0.5,-41),2.3,1.5,hair)
+        _oval(Vector2(side*4.9+turn*0.8,3.4),2.4,1.3,Color(0.90,0.42,0.48,0.20))
+        _oval(Vector2(side*4.6+turn*0.8,1.6),1.5,0.7,Color(1.0,0.86,0.80,0.18))  # brilho da maca
+        # Olhos grandes e amendoados, com delineado puxado para fora; arregalam
+        # e as sobrancelhas sobem quando a criatura esta perto.
+        var e: Vector2 = Vector2(side*3.4+turn*1.2,-0.7)
+        var open: float = 1.0+0.55*fear
+        _oval(e,2.5,1.45*open,Color("f6eeea"),-side*0.10)
+        var iris: Vector2 = e+Vector2(turn*0.6,0.15)
+        cv.draw_circle(iris,minf(1.45,1.3*open),Color("3c2452"))
+        cv.draw_circle(iris+Vector2(0,0.25),minf(1.05,0.95*open),Color("7a4ea0"))
+        cv.draw_circle(iris,0.55,Color("0d0812"))
+        cv.draw_circle(iris+Vector2(-0.5,-0.5),0.38,Color.WHITE)
+        cv.draw_circle(iris+Vector2(0.45,0.45),0.18,Color(1,1,1,0.8))
+        cv.draw_polyline(PackedVector2Array([e+Vector2(-side*2.6,0.1),e+Vector2(-side*1.2,-1.45*open),e+Vector2(side*1.2,-1.6*open),e+Vector2(side*2.7,-0.6),e+Vector2(side*3.6,-1.5)]),hair,1.0,true)
+        cv.draw_polyline(PackedVector2Array([e+Vector2(-side*1.8,1.1),e+Vector2(side*0.4,1.45),e+Vector2(side*2.3,0.8)]),Color(0.35,0.20,0.25,0.45),0.5,true)
+        cv.draw_polyline(PackedVector2Array([e+Vector2(-side*2.1,-3.2-1.4*fear),e+Vector2(side*0.6,-4.0-1.1*fear),e+Vector2(side*3.0,-3.4-0.3*fear)]),hair,0.75,true)
+    # Nariz pequeno e suave.
+    cv.draw_line(Vector2(turn*1.4,1.0),Vector2(turn*1.4+0.6,3.7),Color(0.55,0.33,0.28,0.55),0.6,true)
+    cv.draw_circle(Vector2(turn*1.4+0.2,4.1),0.5,Color(0.55,0.33,0.28,0.35))
+    # Labios cheios: arco do cupido em cima, inferior mais carnudo com brilho.
+    var m: Vector2 = Vector2(turn*1.1,6.3)
+    var drop: float = 0.9*maxf(0.0,fear-0.45)/0.55
+    if drop > 0.0:
+        _oval(m+Vector2(0,0.55+drop*0.5),1.6,0.35+drop*0.6,Color("2a0d16"))
+    poly([m+Vector2(-2.3,0.15),m+Vector2(-1.0,-0.75),m+Vector2(0,-0.4),m+Vector2(1.0,-0.75),m+Vector2(2.3,0.15),m+Vector2(0,0.4)],Color("a84b62"))
+    poly([m+Vector2(-2.1,0.3+drop*0.3),m+Vector2(0,0.45+drop),m+Vector2(2.1,0.3+drop*0.3),m+Vector2(1.2,1.4+drop),m+Vector2(0,1.7+drop),m+Vector2(-1.2,1.4+drop)],Color("c2627a"))
+    cv.draw_circle(m+Vector2(-0.5,1.0+drop),0.35,Color(1,0.85,0.88,0.6))
+    # Cabelo da frente: topo com volume, risca de lado e franja em mechas
+    # que caem varrendo a testa.
+    _shape([Vector2(-9.6,-1),Vector2(-10.2,-7),Vector2(-6.2,-12.4),Vector2(0,-13.6),Vector2(6.2,-12.4),Vector2(10.2,-7),Vector2(9.6,-1),Vector2(8.2,-6.6),Vector2(5.2,-9.4),Vector2(2.6,-10.0),Vector2(-2,-9.6),Vector2(-6,-8.4),Vector2(-8.4,-5)],hair)
+    var fw: float = sin(g.real_time*1.2)*0.3 + hs*0.15
+    strand(cv,[Vector2(2.4,-12.6),Vector2(-1.5,-10.2),Vector2(-5.2,-7.4),Vector2(-7.4+fw,-3.4)],1.7,0.2,hair)
+    strand(cv,[Vector2(2.8,-12.4),Vector2(0.2,-10.6),Vector2(-2.6,-8.6),Vector2(-4.0+fw,-6.0)],1.2,0.15,hair_mid)
+    strand(cv,[Vector2(3.4,-12.2),Vector2(6.0,-10.2),Vector2(7.8,-6.4),Vector2(8.4+fw,-2.4)],1.4,0.2,hair)
+    strand(cv,[Vector2(1.6,-13.0),Vector2(-2.4,-12.0),Vector2(-6.4,-9.6)],0.45,0.1,hair_sheen)
+    strand(cv,[Vector2(4.6,-12.6),Vector2(7.6,-10.4)],0.4,0.1,hair_sheen)
+    cv.draw_set_transform(center, 0.0, Vector2(BODY_SCALE,BODY_SCALE))
+    # Mechas da frente que descem pelos ombros e ondulam sobre o peito.
+    for side in [-1.0, 1.0]:
+        var wv: float = hs*0.5 + sin(g.real_time*1.5+side)*0.4
+        strand(cv,[H+Vector2(side*9.2,-2.5)*HK,H+Vector2(side*9.6,4.0)*HK,U+Vector2(side*10.6+wv*0.5,-47),U+Vector2(side*11.4+wv,-41.5),U+Vector2(side*10.4+wv*1.2,-37.5)],1.9,0.2,hair)
+        strand(cv,[H+Vector2(side*9.0,-3.5)*HK,H+Vector2(side*9.8,3.0)*HK,U+Vector2(side*11.0+wv*0.5,-46.5)],0.4,0.1,hair_sheen)
     # Braco direito: o ombro, o antebraco e os dedos acompanham o objeto.
-    var rest: Vector2 = U+Vector2(16.5-swing,-24.5-run*5.0)
+    var rest: Vector2 = U+Vector2(15.5-swing,-24.5-run*5.0)
     var raised: Vector2 = cleft+Vector2(0,-9.0*extract)
-    var ready: Vector2 = cleft+aim*33.0+Vector2(3,-6)
+    var ready: Vector2 = cleft+aim*31.0+Vector2(3,-6)
     var hand: Vector2 = rest.lerp(cleft,reach)
     if pose > 0.25:
         hand=cleft.lerp(raised,extract)
     if pose > 0.60:
         hand=raised.lerp(ready,extend)
-    var shoulder: Vector2 = U+Vector2(12,-44)
+    var shoulder: Vector2 = U+Vector2(11,-44)
     var elbow: Vector2 = shoulder.lerp(hand,0.51)+Vector2(6,5)
-    _limb(shoulder,elbow,3.3,2.7,sleeve)
-    _limb(elbow,hand,2.5,2.0,skin)
+    _limb(shoulder,elbow,3.0,2.4,sleeve)
+    _limb(elbow,hand,2.3,1.7,skin)
     # Ja fora do decote, a lanterna segue a mao e aponta para a mira.
     if pose > 0.60:
         _flashlight(hand-aim*3.0,hand+aim*15.0,g.light_on and pose > 0.86)
-    _oval(hand,2.7,2.4,Color("d39a85"))
+    _oval(hand,2.4,2.1,Color("d39a85"))
     # Sem efeito de transformacao nos objetos e HUD desenhados em seguida.
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
@@ -790,11 +746,12 @@ func _flashlight(from: Vector2, to: Vector2, glowing: bool) -> void:
         cv.draw_circle(to,7.8,Color(.72,.52,1,.25) if spectral else Color(1,.94,.62,.25))
 
 func _monster() -> void:
-    _ygona(g.draw_monster, g.monster_lit, g.monster_state == "PERSEGUINDO" and not g.monster_lit)
+    _afrodite(g.draw_monster, g.monster_lit, g.monster_state == "PERSEGUINDO" and not g.monster_lit)
 
-func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
-    ## Ygona, a "Afrodite do mal": uma deusa de marmore que apodreceu no fundo
-    ## do mar. Concha partida como aureola, cabelo encharcado ate os quadris,
+func _afrodite(at: Vector2, lit: bool, chasing: bool) -> void:
+    ## Afrodite pela metade: uma seita tentou traze-la por bruxaria e o ritual
+    ## nao terminou, entao o que atravessou e uma deusa de marmore apodrecida,
+    ## como se tivesse ficado presa no fundo do mar. Concha partida como aureola, cabelo encharcado ate os quadris,
     ## tunica grega em farrapos pingando agua preta, pele rachada com veias
     ## acesas e o peito aberto e costurado: falta nela o que ela tira das
     ## outras. Metade do rosto ainda e bela; a outra metade e osso.
@@ -823,8 +780,20 @@ func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
     _oval(Vector2(0,1),23.0,8.0,Color(0,0,0,.55))
     _oval(Vector2(4,2),15.0,4.6,Color(0.04,0.08,0.09,0.65))
     # Cabelo comprido e encharcado, colado nas costas ate os quadris.
+    # Massa arredondada nas costas e, dela, mechas onduladas de comprimentos
+    # diferentes que afinam nas pontas e balancam com atraso.
     var hs: float = sin(t*1.3)*1.4
-    _shape([Vector2(-10,-78+y),Vector2(10,-78+y),Vector2(16,-60+y),Vector2(17+hs,-40+y),Vector2(13+hs,-24+y*0.5),Vector2(6+hs,-29+y),Vector2(hs,-21+y*0.5),Vector2(-7+hs,-28+y),Vector2(-14+hs,-22+y*0.5),Vector2(-18+hs,-40+y),Vector2(-16,-61+y)],hair,false)
+    var sheen: Color = Color(0.22,0.20,0.27,0.55)
+    _shape([Vector2(-9,-79+y),Vector2(9,-79+y),Vector2(15,-66+y),Vector2(16,-52+y),Vector2(10,-46+y),Vector2(-10,-46+y),Vector2(-16,-52+y),Vector2(-15,-66+y)],hair,false)
+    for i in range(9):
+        var u: float = float(i)/8.0
+        var rx: float = lerpf(-14.5,14.5,u)
+        var hlen: float = 26.0+fposmod(float(i)*17.3,14.0)
+        var sway: float = hs*(0.6+0.5*u)+sin(t*1.1+float(i)*0.9)*0.8
+        var bend: float = (u-0.5)*5.0
+        strand(cv,[Vector2(rx*0.8,-62+y),Vector2(rx+bend*0.4,-52+y),Vector2(rx+bend+sway*0.5+sin(float(i)*2.1)*1.2,-52+y+hlen*0.45),Vector2(rx+bend*1.3+sway,-52+y*0.6+hlen)],3.0,0.25,hair)
+    for rx in [-9.0, 4.0, 11.0]:
+        strand(cv,[Vector2(rx*0.8,-64+y),Vector2(rx,-54+y),Vector2(rx+hs*0.5+0.6,-40+y),Vector2(rx+hs+0.3,-30+y)],0.45,0.1,sheen)
     # Tronco de marmore magro demais: clavículas, cintura de vespa.
     _shape([Vector2(-11,-58+y),Vector2(0,-60+y),Vector2(11,-58+y),Vector2(10.5,-49+y),Vector2(6,-40+y),Vector2(-6,-40+y),Vector2(-10.5,-49+y)],marble,false)
     cv.draw_line(Vector2(-9,-57+y),Vector2(-1.5,-55.5+y),marble_dk,1.0,true)
@@ -894,8 +863,8 @@ func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
     cv.draw_colored_polygon(fan,shell)
     for k in range(0,17,2):
         cv.draw_line(Vector2(0,-8),fan[k+1],shell.darkened(0.4),0.8,true)
-    # Cabelo molhado colado no cranio.
-    _oval(Vector2(0,-10),10.0,10.5,hair)
+    # Cabelo molhado colado no cranio, com risca no meio e linha irregular.
+    _shape([Vector2(-10.5,-6),Vector2(-10,-14),Vector2(-6,-19.5),Vector2(0,-21),Vector2(6,-19.5),Vector2(10,-14),Vector2(10.5,-6),Vector2(8.5,1),Vector2(-8.5,1)],hair,false)
     # Rosto de deusa: oval, queixo fino, marmore sujo.
     _shape([Vector2(-7.5,-12),Vector2(-8,-6),Vector2(-7,0),Vector2(-4,4.5),Vector2(0,6),Vector2(4,4.5),Vector2(7,0),Vector2(8,-6),Vector2(7.5,-12),Vector2(4.5,-16.5),Vector2(0,-17.5),Vector2(-4.5,-16.5)],marble,false)
     # Metade direita descarnada: carne viva e osso do maxilar.
@@ -927,9 +896,15 @@ func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
         cv.draw_line(Vector2(tx,ty),Vector2(tx,ty+1.4),Color("e6dccf"),0.6,true)
     cv.draw_polyline(PackedVector2Array([Vector2(-2,-17.4),Vector2(-1,-14),Vector2(-2.5,-11.5)]),vein,0.6,true)
     # Mechas encharcadas caindo pelos lados (uma atravessa a metade podre).
-    for hx in [-11.0,-9.0,-7.5,5.5,7.5,9.5,11.5]:
-        var hl: float = 10.0+fposmod(hx*7.3,12.0)
-        cv.draw_line(Vector2(hx*0.75,-18),Vector2(hx+sin(t*1.7+hx)*1.3,hl),hair,1.0 if absf(hx) < 6.0 else 2.2,true)
+    # Cada mecha sai da risca, contorna a testa e cai ondulando pelos ombros.
+    for hx in [-10.5,-8.8,-7.2,7.0,8.6,10.2]:
+        var sd: float = signf(hx)
+        var hl: float = 14.0+fposmod(absf(hx)*7.3,10.0)
+        var wv: float = sin(t*1.7+hx)*1.3
+        strand(cv,[Vector2(sd*1.0,-20.5),Vector2(hx*0.85,-14),Vector2(hx+sd*0.6,-4),Vector2(hx+wv*0.5-sd*0.4,4),Vector2(hx+sd*1.2+wv,hl)],1.5,0.15,hair)
+    # Uma mecha fina cai na frente da metade podre do rosto.
+    strand(cv,[Vector2(1.0,-20),Vector2(4.0,-14),Vector2(5.2,-6),Vector2(4.4+sin(t*1.5)*0.6,2.0),Vector2(5.4+sin(t*1.5)*1.0,9.0)],0.8,0.1,hair)
+    strand(cv,[Vector2(-1.0,-20.5),Vector2(-6.5,-17),Vector2(-9.2,-10)],0.35,0.1,sheen)
     cv.draw_set_transform(base,0.0,Vector2(s,s))
     if lit:
         cv.draw_arc(Vector2(0,-42),42,0,TAU,40,Color(.65,.83,1.0,.30),1.6)
@@ -1042,11 +1017,6 @@ func _text(at: Vector2, label: String, size: int, color: Color) -> void:
     cv.draw_string(ThemeDB.fallback_font,at+Vector2(1.3,1.3),label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,Color(0,0,0,.85))
     cv.draw_string(ThemeDB.fallback_font,at,label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
 
-func _labeled_door() -> void:
-    var p: Vector2 = screen(g.tile(26,34))
-    _box(g.tile(26,34),40.0,20.0,39.0,Color("a38660") if g.monster_banished else Color("5c4554"))
-    _text(p+Vector2(-30,-58),"SAÍDA",12,Color("ebd6b3"))
-
 func _clues_and_ritual() -> void:
     if g.light_on and g.ghost_mode:
         if g.is_illuminated(g.tile(12,11)):
@@ -1061,7 +1031,7 @@ func _clues_and_ritual() -> void:
         for i in range(9):
             var ang: float = TAU*float(i)/9.0 + g.time_passed*1.7
             cv.draw_circle(p+Vector2(cos(ang)*44.0,sin(ang)*20.0-22),3.0,Color("eeb3d9"))
-        # As tres sacrificadas se erguem em volta do altar para buscar a Ygona.
+        # As tres sacrificadas se erguem em volta do altar para levar Afrodite de volta.
         var progress: float = 1.0-g.ritual_left/g.CFG.RITUAL_SECONDS
         for i in range(3):
             var ga: float = TAU*float(i)/3.0+PI/6.0
@@ -1072,7 +1042,7 @@ func _clues_and_ritual() -> void:
             cv.draw_circle(gp+Vector2(0,-56),8.0,pale)
             cv.draw_circle(gp+Vector2(-3,-57),1.6,Color(0,0,0,al))
             cv.draw_circle(gp+Vector2(3,-57),1.6,Color(0,0,0,al))
-            # O vazio no peito, onde a Ygona cortou.
+            # O vazio no peito, onde a seita cortou.
             cv.draw_line(gp+Vector2(-7,-38),gp+Vector2(7,-38),Color(.35,.03,.09,al),2.4)
             _text(gp+Vector2(-18,-70),str(g.VICTIMS[i]["name"]),10,Color(.88,.92,1.0,al))
 
@@ -1151,12 +1121,9 @@ func draw_world() -> void:
             "battery": _battery(entity["at"])
             "hide": _hide_spot(entity["at"])
             "portal": _portal(entity["at"])
-            "bottle":
-                var p: Vector2 = screen(entity["at"])
-                cv.draw_circle(p+Vector2(0,-10),6,Color("90cce4"))
-                cv.draw_arc(p+Vector2(0,-10),17,0,TAU,28,Color(.70,.83,1,.30),2)
+            "bottle": _bottle(entity["at"])
             "monster": _monster()
-            "apparition": _ygona(g.apparition["at"],g.is_illuminated(g.apparition["at"]),false)
+            "apparition": _afrodite(g.apparition["at"],g.is_illuminated(g.apparition["at"]),false)
             "mannequin": _mannequin(entity["data"])
             "hanged": _hanged(entity["data"])
             "vulto": _vulto(entity["data"])
@@ -1166,3 +1133,965 @@ func draw_world() -> void:
     # Gradiente sombrio de vinheta em quatro faixas discretas.
     cv.draw_rect(Rect2(0,0,32,VIEW_HEIGHT),Color(0,0,.02,.23))
     cv.draw_rect(Rect2(VIEW_WIDTH-32,0,32,VIEW_HEIGHT),Color(0,0,.02,.23))
+
+# =====================================================================
+# CENARIO: piso e paredes com o acabamento de cada comodo.
+# Desenhados uma vez por tools/bake_scenery.gd e salvos em
+# assets/render_cache (o jogo so cola as imagens prontas).
+# =====================================================================
+const ROOM_STYLE: Dictionary = {"BIBLIOTECA":"library","COZINHA":"kitchen","QUARTO":"bedroom","OFICINA":"workshop","SALÃO":"hall","VESTÍBULO":"foyer"}
+
+func _h(a: float, b: float) -> float:
+    ## Ruido deterministico (o mesmo valor sempre que o cache for refeito).
+    return fposmod(sin(a*12.9898+b*78.233)*43758.5453,1.0)
+
+func room_style(x: int, y: int) -> String:
+    for room in g.map.rooms:
+        if x >= int(room["x"]) and x < int(room["x"])+int(room["w"]) and y >= int(room["y"]) and y < int(room["y"])+int(room["h"]):
+            return ROOM_STYLE.get(room["name"],"corridor")
+    return "corridor"
+
+func _static_wall(x: int, y: int) -> bool:
+    if x < 0 or y < 0 or x >= ManorMap.W or y >= ManorMap.H:
+        return true
+    return g.map.cells[y][x] == 1
+
+func _fw(x: float, y: float) -> Vector2:
+    return screen(Vector2(x,y))
+
+func _fquad(x0: float, y0: float, x1: float, y1: float, col: Color) -> void:
+    poly([_fw(x0,y0),_fw(x1,y0),_fw(x1,y1),_fw(x0,y1)],col)
+
+func _fline(x0: float, y0: float, x1: float, y1: float, col: Color, w: float = 1.0) -> void:
+    cv.draw_line(_fw(x0,y0),_fw(x1,y1),col,w,true)
+
+func bake_floor(size: Vector2) -> void:
+    ## Piso inteiro da mansao, com o padrao proprio de cada comodo.
+    cv.draw_rect(Rect2(Vector2.ZERO,size),Color("080d17"))
+    for y in range(ManorMap.H):
+        for x in range(ManorMap.W):
+            if _static_wall(x,y):
+                _fquad(x*TS,y*TS,(x+1)*TS,(y+1)*TS,Color("101925"))
+            else:
+                _floor_cell(x,y,room_style(x,y))
+    _rugs()
+
+func _planks(X: float, Y: float, base: Color, along_x: bool, rows: int, seed: float) -> void:
+    ## Tabuas corridas: emendas desencontradas, tons variados, veio e frestas.
+    var bw: float = float(TS)/float(rows)
+    for k in range(rows):
+        var row: int = int((Y if along_x else X)/bw)+k
+        var a0: float = X if along_x else Y
+        var off: float = fposmod(float(row)*21.0,64.0)
+        var joint: float = ceil((a0-off)/64.0)*64.0+off
+        var cuts: Array = [a0]
+        if joint > a0+0.5 and joint < a0+TS-0.5:
+            cuts.append(joint)
+        cuts.append(a0+TS)
+        for c in range(cuts.size()-1):
+            var s0: float = cuts[c]
+            var s1: float = cuts[c+1]
+            var tone: float = _h(float(row)+seed,floor((s0+1.0-off)/64.0))
+            var col: Color = base.lerp(base.lightened(0.22),tone*0.7).darkened(0.08*_h(float(row),seed))
+            var b0: float = (Y if along_x else X)+k*bw
+            if along_x:
+                _fquad(s0,b0,s1,b0+bw,col)
+                cv.draw_line(_fw(s0+3,b0+bw*0.45),_fw(s1-3,b0+bw*0.55),col.darkened(0.16),0.6,true)
+                if s0 > a0:
+                    _fline(s0,b0,s0,b0+bw,Color(0,0,0,0.45),1.0)
+            else:
+                _fquad(b0,s0,b0+bw,s1,col)
+                cv.draw_line(_fw(b0+bw*0.45,s0+3),_fw(b0+bw*0.55,s1-3),col.darkened(0.16),0.6,true)
+                if s0 > a0:
+                    _fline(b0,s0,b0+bw,s0,Color(0,0,0,0.45),1.0)
+        if along_x:
+            _fline(X,Y+k*bw,X+TS,Y+k*bw,Color(0,0,0,0.38),1.0)
+        else:
+            _fline(X+k*bw,Y,X+k*bw,Y+TS,Color(0,0,0,0.38),1.0)
+
+func _floor_cell(x: int, y: int, style: String) -> void:
+    var X: float = float(x*TS)
+    var Y: float = float(y*TS)
+    var n: float = _h(float(x),float(y))
+    match style:
+        "library":
+            _planks(X,Y,Color("3a291e"),true,4,1.0)
+        "bedroom":
+            _planks(X,Y,Color("45302a"),false,4,2.0)
+        "corridor":
+            _planks(X,Y,Color("33292a"),true,3,3.0)
+            if n > 0.8:
+                _fquad(X+6,Y+9,X+20,Y+16,Color(0,0,0,0.18))     # tabua gasta
+        "kitchen":
+            # Ladrilhinho hidraulico creme, encardido, com rejunte escuro.
+            for j in range(4):
+                for i in range(4):
+                    var col: Color = Color("6b6a5e").darkened(0.22*_h(float(x*4+i),float(y*4+j)))
+                    _fquad(X+i*8,Y+j*8,X+i*8+8,Y+j*8+8,col)
+            for k in range(1,4):
+                _fline(X,Y+k*8,X+TS,Y+k*8,Color(0.1,0.1,0.08,0.55),0.7)
+                _fline(X+k*8,Y,X+k*8,Y+TS,Color(0.1,0.1,0.08,0.55),0.7)
+            if n > 0.86:
+                cv.draw_circle(_fw(X+10+n*12,Y+14),3.5,Color(0.30,0.03,0.07,0.45))
+        "workshop":
+            # Cimento queimado: manchas de oleo, pontinhos e rachaduras.
+            _fquad(X,Y,X+TS,Y+TS,Color("37383d").lerp(Color("2d2e33"),n))
+            for k in range(7):
+                cv.draw_circle(_fw(X+_h(n,float(k))*TS,Y+_h(float(k),n)*TS),0.7,Color(0.6,0.6,0.62,0.18))
+            if n > 0.78:
+                cv.draw_polyline(PackedVector2Array([_fw(X+2,Y+8+n*10),_fw(X+11,Y+12),_fw(X+18,Y+9+n*6),_fw(X+30,Y+16)]),Color(0,0,0,0.5),0.9,true)
+            if _h(float(y),float(x)) > 0.96:
+                var oc: Vector2 = _fw(X+16,Y+16)
+                cv.draw_set_transform(oc,0.0,Vector2(1.0,0.5))
+                cv.draw_circle(Vector2.ZERO,12.0,Color(0.04,0.04,0.06,0.45))
+                cv.draw_circle(Vector2(3,1),7.0,Color(0.02,0.02,0.04,0.35))
+                cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+        "hall":
+            # Marmore em placas grandes, alternadas, com veios.
+            var col: Color = Color("433e4b") if (x+y)%2 == 0 else Color("3b3744")
+            _fquad(X,Y,X+TS,Y+TS,col.darkened(0.06*n))
+            var v0: float = _h(n,7.0)
+            cv.draw_polyline(PackedVector2Array([_fw(X,Y+v0*TS),_fw(X+10,Y+v0*TS*0.7+6),_fw(X+20,Y+v0*TS*0.9+3),_fw(X+TS,Y+_h(v0,3.0)*TS)]),Color(0.82,0.78,0.86,0.10),0.8,true)
+        "foyer":
+            # Xadrez preto e branco de entrada de casarao, com filete.
+            for j in range(2):
+                for i in range(2):
+                    var dark: bool = ((x*2+i)+(y*2+j))%2 == 1
+                    _fquad(X+i*16,Y+j*16,X+i*16+16,Y+j*16+16,Color("221f28") if dark else Color("5b5662"))
+            _fquad(X+15,Y+15,X+17,Y+17,Color("8a7650"))
+    # Rejunte da celula.
+    _fline(X,Y,X+TS,Y,Color(0.02,0.03,0.06,0.28),1.0)
+    _fline(X,Y,X,Y+TS,Color(0.02,0.03,0.06,0.28),1.0)
+
+func _rug(x0: float, y0: float, x1: float, y1: float, field: Color, border: Color, trim: Color, fringe_on_y: bool) -> void:
+    ## Tapete persa: barra, filetes dourados, medalhoes e franja nas pontas.
+    _fquad(x0,y0,x1,y1,border)
+    _fquad(x0+5,y0+5,x1-5,y1-5,field)
+    for inset in [3.0, 6.5]:
+        var a: float = inset
+        cv.draw_polyline(PackedVector2Array([_fw(x0+a,y0+a),_fw(x1-a,y0+a),_fw(x1-a,y1-a),_fw(x0+a,y1-a),_fw(x0+a,y0+a)]),trim,0.9,true)
+    var long_y: bool = (y1-y0) > (x1-x0)
+    var length: float = (y1-y0) if long_y else (x1-x0)
+    var count: int = maxi(1,int(length/64.0))
+    var cx: float = (x0+x1)*0.5
+    var cy: float = (y0+y1)*0.5
+    var r: float = minf(x1-x0,y1-y0)*0.28
+    for i in range(count):
+        var t: float = (float(i)+0.5)/float(count)
+        var mx: float = cx if long_y else lerpf(x0,x1,t)
+        var my: float = lerpf(y0,y1,t) if long_y else cy
+        # Medalhao redondo no plano do piso (elipse na tela), em tons do proprio tapete.
+        var ring: PackedVector2Array = PackedVector2Array()
+        var core: PackedVector2Array = PackedVector2Array()
+        for k in range(24):
+            var a: float = TAU*float(k)/24.0
+            ring.append(_fw(mx+cos(a)*r,my+sin(a)*r))
+            core.append(_fw(mx+cos(a)*r*0.5,my+sin(a)*r*0.5))
+        cv.draw_colored_polygon(ring,border.lightened(0.04))
+        cv.draw_colored_polygon(core,field.lightened(0.08))
+        ring.append(ring[0])
+        cv.draw_polyline(ring,Color(trim.r,trim.g,trim.b,0.55),0.8,true)
+        for k in range(4):
+            var a2: float = TAU*float(k)/4.0
+            _fline(mx+cos(a2)*r*0.5,my+sin(a2)*r*0.5,mx+cos(a2)*r*1.25,my+sin(a2)*r*1.25,Color(trim.r,trim.g,trim.b,0.45),0.8)
+    # Franja nas duas pontas.
+    var steps: int = int(((x1-x0) if fringe_on_y else (y1-y0))/3.0)
+    for i in range(steps+1):
+        var f: float = float(i)/float(steps)
+        if fringe_on_y:
+            var fx: float = lerpf(x0+1,x1-1,f)
+            _fline(fx,y0,fx,y0-3.5,trim.darkened(0.2),0.7)
+            _fline(fx,y1,fx,y1+3.5,trim.darkened(0.2),0.7)
+        else:
+            var fy: float = lerpf(y0+1,y1-1,f)
+            _fline(x0,fy,x0-3.5,fy,trim.darkened(0.2),0.7)
+            _fline(x1,fy,x1+3.5,fy,trim.darkened(0.2),0.7)
+
+func _rugs() -> void:
+    # Passadeira do salao ate o altar, tapete do quarto e da biblioteca.
+    _rug(26.5*TS-26,13*TS,26.5*TS+26,26.8*TS,Color("4a1820"),Color("2c0e14"),Color("a2844e"),true)
+    _rug(2.4*TS,19.0*TS,9.6*TS,26.2*TS,Color("5a2028"),Color("33121a"),Color("9c7c4c"),false)
+    _rug(6.5*TS,7.6*TS,14.5*TS,11.6*TS,Color("1f3a30"),Color("142820"),Color("8c7a4a"),false)
+
+# ------------------------------- PAREDES -------------------------------
+func _wpt(at: Vector2, side: int, u: float, z: float) -> Vector2:
+    ## Ponto numa face de parede: side 0 = face +y, 1 = face +x;
+    ## u vai da esquerda (0) para a direita (1) na tela, z e a altura.
+    if side == 0:
+        return _wp(at,-16.0+32.0*u,16.0,z)
+    return _wp(at,16.0,16.0-32.0*u,z)
+
+func _wq(at: Vector2, side: int, u0: float, u1: float, z0: float, z1: float, col: Color) -> void:
+    poly([_wpt(at,side,u0,z0),_wpt(at,side,u1,z0),_wpt(at,side,u1,z1),_wpt(at,side,u0,z1)],col)
+
+func _wl(at: Vector2, side: int, u0: float, z0: float, u1: float, z1: float, col: Color, w: float = 1.0) -> void:
+    cv.draw_line(_wpt(at,side,u0,z0),_wpt(at,side,u1,z1),col,w,true)
+
+func bake_wall(x: int, y: int) -> void:
+    ## Um bloco de parede, com cada face vestida pelo comodo para onde olha.
+    var at: Vector2 = g.tile(x,y)
+    for side in [0, 1]:
+        var nx: int = x if side == 0 else x+1
+        var ny: int = y+1 if side == 0 else y
+        var style: String = "exterior" if _static_wall(nx,ny) else room_style(nx,ny)
+        _wall_face(at,side,style,x,y)
+    var H: float = WALL_HEIGHT
+    poly([_wp(at,-16,-16,H),_wp(at,16,-16,H),_wp(at,16,16,H),_wp(at,-16,16,H)],Color("1b202c"))
+    cv.draw_line(_wp(at,-16,16,H),_wp(at,16,16,H),Color(0.75,0.70,0.68,0.22),1.0,true)
+    cv.draw_line(_wp(at,16,16,H),_wp(at,16,-16,H),Color(0.75,0.70,0.68,0.14),1.0,true)
+
+func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
+    var H: float = WALL_HEIGHT
+    var k: float = 0.10 if side == 0 else 0.30          # face +x recebe menos luz
+    var n: float = _h(float(x*7+side),float(y*3))
+    match style:
+        "library":
+            # Papel de parede verde com arabescos, lambri de madeira embaixo.
+            _wq(at,side,0,1,0,H,Color("26382f").darkened(k))
+            for r in range(4):
+                var z: float = 17.0+float(r)*5.5
+                for i in range(4):
+                    var u: float = (float(i)+0.25+0.5*float(r%2))/4.0
+                    if u < 0.95:
+                        poly([_wpt(at,side,u-0.03,z),_wpt(at,side,u,z+2.2),_wpt(at,side,u+0.03,z),_wpt(at,side,u,z-2.2)],Color("3c5546").darkened(k))
+            _wq(at,side,0,1,0,14,Color("3d2a1f").darkened(k))
+            for pu in [[0.07,0.45],[0.55,0.93]]:
+                _wq(at,side,pu[0],pu[1],3,11,Color("33231a").darkened(k))
+                _wl(at,side,pu[0],11,pu[1],11,Color("5a4030").darkened(k),0.8)
+            _wl(at,side,0,14,1,14,Color("6b4a33").darkened(k),1.6)
+            _wl(at,side,0,H-1,1,H-1,Color("7a6440").darkened(k),1.2)
+        "kitchen":
+            # Azulejo de metro encardido, com sujeira escorrida.
+            _wq(at,side,0,1,0,H,Color("6c7069").darkened(k))
+            var row: int = 0
+            var z: float = 3.0
+            while z < H-1:
+                var off: float = 0.0 if row%2 == 0 else 1.0/6.0
+                _wl(at,side,0,z,1,z,Color(0.15,0.16,0.15,0.55),0.7)
+                for i in range(4):
+                    var u: float = off+float(i)/3.0
+                    if u > 0.01 and u < 0.99:
+                        _wl(at,side,u,z,u,minf(z+4.5,H),Color(0.15,0.16,0.15,0.55),0.7)
+                z += 4.5
+                row += 1
+            _wq(at,side,0,1,0,3,Color("2a2622").darkened(k))
+            _wq(at,side,0,1,3,10,Color(0.12,0.10,0.06,0.30))
+            if n > 0.6:
+                _wl(at,side,n*0.8,H-2,n*0.8+0.02,H-14-n*8,Color(0.22,0.15,0.08,0.45),1.4)
+            if n > 0.88:
+                for d in range(4):
+                    cv.draw_circle(_wpt(at,side,0.3+_h(n,float(d))*0.4,8+_h(float(d),n)*14),0.8+_h(float(d),2.0),Color(0.35,0.03,0.08,0.7))
+        "bedroom":
+            # Papel listrado rosa-velho com florzinhas; alguns quadros.
+            _wq(at,side,0,1,0,H,Color("4b3440").darkened(k))
+            for i in range(6):
+                var u0: float = float(i)/6.0
+                _wq(at,side,u0,u0+1.0/12.0,3,H,Color("57404c").darkened(k))
+                for r in range(5):
+                    cv.draw_circle(_wpt(at,side,u0+1.0/24.0,8+float(r)*6.0+float(i%2)*3.0),0.7,Color(0.78,0.55,0.62,0.35))
+            _wq(at,side,0,1,0,3.5,Color("3a2620").darkened(k))
+            _wl(at,side,0,3.5,1,3.5,Color("5a3c30").darkened(k),1.0)
+            if n > 0.8 and side == 0:
+                _wq(at,side,0.28,0.72,15,31,Color("6e5636").darkened(k))
+                _wq(at,side,0.33,0.67,17,29,Color("1a1418"))
+                var fc: Vector2 = _wpt(at,side,0.5,23.5)
+                cv.draw_set_transform(fc,0.0,Vector2(0.8,1.0))
+                cv.draw_circle(Vector2.ZERO,3.0,Color(0.62,0.56,0.55,0.55))
+                cv.draw_circle(Vector2(-1.1,-0.6),0.5,Color(0,0,0,0.8))
+                cv.draw_circle(Vector2(1.1,-0.6),0.5,Color(0,0,0,0.8))
+                cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+            elif n > 0.65:
+                poly([_wpt(at,side,0.55,H-3),_wpt(at,side,0.8,H-4),_wpt(at,side,0.74,H-12),_wpt(at,side,0.6,H-9)],Color("6e6268").darkened(k))
+        "workshop":
+            # Tijolo aparente fuligento.
+            _wq(at,side,0,1,0,H,Color("3a2f2c").darkened(k))
+            var r2: int = 0
+            var z2: float = 0.5
+            while z2 < H-0.5:
+                var off2: float = 0.0 if r2%2 == 0 else 0.25
+                for i in range(-1,3):
+                    var u0: float = off2+float(i)*0.5
+                    var a: float = clampf(u0+0.02,0.0,1.0)
+                    var b: float = clampf(u0+0.48,0.0,1.0)
+                    if b-a > 0.02:
+                        var tone: float = _h(float(x*4+i+side*13),float(y*9+r2))
+                        _wq(at,side,a,b,z2,minf(z2+3.4,H),Color("6a3c31").lerp(Color("7c4a3a"),tone).darkened(k+0.2*_h(tone,1.0)))
+                z2 += 4.0
+                r2 += 1
+            _wq(at,side,0,1,H-11,H,Color(0,0,0,0.28))
+        "hall":
+            # Papel bordo com filetes dourados, lambri escuro e arandelas.
+            _wq(at,side,0,1,0,H,Color("3c1923").darkened(k))
+            for i in range(4):
+                var u: float = (float(i)+0.5)/4.0
+                _wl(at,side,u,14,u,H-2,Color(0.62,0.48,0.26,0.45).darkened(k),0.6)
+                cv.draw_circle(_wpt(at,side,u-0.125,25),0.8,Color(0.62,0.48,0.26,0.35))
+            _wq(at,side,0,1,0,13,Color("2d1b15").darkened(k))
+            for pu in [[0.07,0.45],[0.55,0.93]]:
+                _wq(at,side,pu[0],pu[1],2.5,10.5,Color("24150f").darkened(k))
+            _wl(at,side,0,13,1,13,Color("9a7a45").darkened(k),1.4)
+            _wl(at,side,0,H-1,1,H-1,Color("9a7a45").darkened(k),1.2)
+            if n > 0.84:
+                var sc: Vector2 = _wpt(at,side,0.5,22)
+                cv.draw_line(sc,sc+Vector2(0,-4),Color("8a6a3a"),1.6)
+                cv.draw_line(sc+Vector2(-3,-4),sc+Vector2(3,-4),Color("8a6a3a"),1.4)
+                cv.draw_line(sc+Vector2(0,-4),sc+Vector2(0,-9),Color("d8cdbb"),1.8)
+                cv.draw_circle(sc+Vector2(0,-11),1.6,Color(1.0,0.75,0.4,0.85))
+                cv.draw_circle(sc+Vector2(0,-11),5.0,Color(1.0,0.7,0.35,0.12))
+        "foyer":
+            # Lambri de madeira com almofadas, do chao ao teto.
+            _wq(at,side,0,1,0,H,Color("45322a").darkened(k))
+            for pu in [[0.06,0.46],[0.54,0.94]]:
+                for pz in [[4.0,17.0],[20.0,33.0]]:
+                    _wq(at,side,pu[0],pu[1],pz[0],pz[1],Color("3a2922").darkened(k))
+                    _wl(at,side,pu[0],pz[1],pu[1],pz[1],Color("1e1511"),0.8)
+                    _wl(at,side,pu[0],pz[0],pu[1],pz[0],Color("6a4e3c").darkened(k),0.8)
+            _wq(at,side,0,1,0,2.5,Color("231914"))
+            _wl(at,side,0,H-1,1,H-1,Color("7a5c44").darkened(k),1.2)
+        "corridor":
+            # Reboco descascando, com mancha de umidade embaixo.
+            _wq(at,side,0,1,0,H,Color("45424d").darkened(k))
+            _wq(at,side,0,1,0,9,Color(0.10,0.12,0.10,0.30))
+            if n > 0.5:
+                poly([_wpt(at,side,n*0.6,20),_wpt(at,side,n*0.6+0.25,22),_wpt(at,side,n*0.6+0.2,14),_wpt(at,side,n*0.6+0.05,12)],Color("5b5258").darkened(k))
+            if n < 0.35:
+                cv.draw_polyline(PackedVector2Array([_wpt(at,side,0.2,H-2),_wpt(at,side,0.28,H-10),_wpt(at,side,0.22,H-16),_wpt(at,side,0.35,H-24)]),Color(0,0,0,0.5),0.8,true)
+            _wq(at,side,0,1,0,2.5,Color("27242b"))
+        _:
+            # Fachada externa: pedra em blocos grandes.
+            _wq(at,side,0,1,0,H,Color("262b36").darkened(k))
+            var r3: int = 0
+            var z3: float = 0.0
+            while z3 < H:
+                _wl(at,side,0,z3,1,z3,Color(0,0,0,0.45),0.8)
+                var off3: float = 0.0 if r3%2 == 0 else 0.5
+                for i in range(2):
+                    var u3: float = off3+float(i)*0.5
+                    if u3 > 0.01 and u3 < 0.99:
+                        _wl(at,side,u3,z3,u3,minf(z3+9.0,H),Color(0,0,0,0.45),0.8)
+                z3 += 9.0
+                r3 += 1
+    # Rodape de sombra onde a parede encontra o piso.
+    _wq(at,side,0,1,0,1.2,Color(0,0,0,0.35))
+
+# =====================================================================
+# OBJETOS E MOVEIS: cada um com a forma do que e (pernas, gavetas,
+# lombadas, portas...), montados em caixas no espaco do mundo.
+# =====================================================================
+func _wp(at: Vector2, x: float, y: float, h: float) -> Vector2:
+    ## Ponto do mundo (deslocado x,y de "at") erguido h px do chao.
+    return screen(at+Vector2(x,y))+Vector2(0,-h)
+
+func _prism(at: Vector2, x0: float, y0: float, x1: float, y1: float, z0: float, z1: float, col: Color, edge: bool = true) -> void:
+    ## Caixa alinhada aos eixos, de z0 a z1 de altura: faces +y, +x e tampo.
+    var a: Vector2 = _wp(at,x0,y0,z1)
+    var b: Vector2 = _wp(at,x1,y0,z1)
+    var c: Vector2 = _wp(at,x1,y1,z1)
+    var d: Vector2 = _wp(at,x0,y1,z1)
+    var b0: Vector2 = _wp(at,x1,y0,z0)
+    var c0: Vector2 = _wp(at,x1,y1,z0)
+    var d0: Vector2 = _wp(at,x0,y1,z0)
+    poly([d0,c0,c,d],col.darkened(0.22))
+    poly([b0,c0,c,b],col.darkened(0.40))
+    poly([a,b,c,d],col.lightened(0.10))
+    if edge:
+        cv.draw_line(d,c,Color(1,0.92,0.85,0.22),1.0,true)
+        cv.draw_line(c,b,Color(1,0.92,0.85,0.12),1.0,true)
+        cv.draw_line(c,c0,Color(0,0,0,0.28),1.0,true)
+
+func _qy(at: Vector2, y: float, x0: float, x1: float, z0: float, z1: float, col: Color) -> void:
+    ## Retangulo na face voltada para +y (plano y constante).
+    poly([_wp(at,x0,y,z0),_wp(at,x1,y,z0),_wp(at,x1,y,z1),_wp(at,x0,y,z1)],col)
+
+func _qx(at: Vector2, x: float, y0: float, y1: float, z0: float, z1: float, col: Color) -> void:
+    ## Retangulo na face voltada para +x (plano x constante).
+    poly([_wp(at,x,y0,z0),_wp(at,x,y1,z0),_wp(at,x,y1,z1),_wp(at,x,y0,z1)],col)
+
+func _qtop(at: Vector2, x0: float, y0: float, x1: float, y1: float, z: float, col: Color) -> void:
+    poly([_wp(at,x0,y0,z),_wp(at,x1,y0,z),_wp(at,x1,y1,z),_wp(at,x0,y1,z)],col)
+
+func _ground_shadow(at: Vector2, w: float, d: float, alpha: float = 0.35) -> void:
+    poly([_wp(at,-w*0.5-3,-d*0.5-1,0),_wp(at,w*0.5+3,-d*0.5-1,0),_wp(at,w*0.5+4,d*0.5+4,0),_wp(at,-w*0.5-1,d*0.5+4,0)],Color(0,0,0,alpha))
+
+func _furniture(obj: Dictionary) -> void:
+    var at: Vector2 = obj["at"]
+    var w: float = obj["w"]
+    var d: float = obj["d"]
+    var h: float = obj["h"]
+    var col: Color = obj["c"]
+    var kind: String = obj["kind"]
+    _ground_shadow(at,w,d)
+    match kind:
+        "table": _table(at,w,d,h,col)
+        "shelf": _bookshelf(at,w,d,h,col)
+        "butcher": _counter(at,w,d,h,col)
+        "bed": _bed(at,w,d,h,col)
+        "mirror": _dresser_mirror(at,w,d,h,col)
+        "altar": _altar(at,w,d,h,col)
+        _: _box(at,w,d,h,col)
+    _table_props(obj)
+
+func _table(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Mesa de madeira: quatro pernas torneadas, saia e tampo de tabuas.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    var leg: Color = col.darkened(0.30)
+    var li: float = 4.0
+    for corner in [Vector2(-1,-1),Vector2(1,-1),Vector2(-1,1),Vector2(1,1)]:
+        var cx: float = corner.x*(hw-li)
+        var cy: float = corner.y*(hd-li)
+        _prism(at,cx-1.6,cy-1.6,cx+1.6,cy+1.6,0,h-4,leg,false)
+        _prism(at,cx-2.2,cy-2.2,cx+2.2,cy+2.2,h*0.45,h*0.45+2,leg.lightened(0.08),false)
+    _qy(at,hd-li+1.6,-hw+li,hw-li,h-8,h-3.5,col.darkened(0.32))
+    _qx(at,hw-li+1.6,hd-li,-hd+li,h-8,h-3.5,col.darkened(0.48))
+    _prism(at,-hw,-hd,hw,hd,h-3.5,h,col)
+    var planks: int = maxi(2,int(d/11.0))
+    for i in range(1,planks):
+        var yy: float = -hd+d*float(i)/float(planks)
+        cv.draw_line(_wp(at,-hw,yy,h),_wp(at,hw,yy,h),col.darkened(0.25),0.8,true)
+    for i in range(planks):
+        var yy: float = -hd+d*(float(i)+0.5)/float(planks)
+        var gx: float = -hw+w*_h(at.x+float(i),at.y)
+        cv.draw_line(_wp(at,gx,yy-1,h),_wp(at,minf(gx+w*0.25,hw-2),yy+0.5,h),col.lightened(0.06),0.6,true)
+
+func _bookshelf(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Estante: armacao de madeira, tres prateleiras de livros e cornija.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    _prism(at,-hw,-hd,hw,hd,0,h,col)
+    _qy(at,hd,-hw+2.5,hw-2.5,2.5,h-3,col.darkened(0.65))
+    var shelves: Array = [2.5,h*0.36,h*0.68,h-3.0]
+    var palette: Array = [Color("7a2a33"),Color("2b4566"),Color("3a5a36"),Color("7a5a2a"),Color("553565"),Color("8f7448"),Color("2c2b38"),Color("6b3a28")]
+    for s in range(3):
+        var z0: float = shelves[s]+1.6
+        var gap: float = float(shelves[s+1])-z0-0.6
+        var x: float = -hw+3.0
+        var i: int = 0
+        while x < hw-3.5:
+            var r: float = _h(at.x+float(s*31+i),at.y+float(i))
+            var bw: float = 2.0+r*2.2
+            if x+bw > hw-3.0:
+                break
+            var bh: float = gap*(0.68+0.28*_h(r,float(i)))
+            if r > 0.9:
+                x += bw*0.6               # um vao: livro faltando
+            else:
+                var bc: Color = palette[int(r*97.0)%palette.size()]
+                _qy(at,hd+0.01,x,x+bw,z0,z0+bh,bc)
+                _qy(at,hd+0.02,x,x+bw,z0+bh-2.2,z0+bh-1.4,Color("c8a85e").darkened(0.2))
+                cv.draw_line(_wp(at,x,hd,z0),_wp(at,x,hd,z0+bh),Color(0,0,0,0.35),0.6)
+            x += bw
+            i += 1
+        _qy(at,hd+0.03,-hw+2.5,hw-2.5,shelves[s],shelves[s]+1.6,col.lightened(0.05))
+    _qx(at,hw,hd,-hd,2,h-2,col.darkened(0.46))
+    cv.draw_line(_wp(at,hw,hd-3,3),_wp(at,hw,hd-3,h-3),col.darkened(0.6),0.7)
+    _prism(at,-hw-1.5,-hd-1,hw+1.5,hd+1.6,h,h+2.6,col.lightened(0.06))
+
+func _counter(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Bancada de cozinha: portas de armario, rodape, tampo de inox e tabua.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    _prism(at,-hw+2,-hd+2,hw-2,hd-2,0,3,Color("1a1a1e"),false)
+    _prism(at,-hw,-hd,hw,hd,3,h-2.5,col)
+    var doors: int = maxi(2,int(w/24.0))
+    var dw: float = (w-4.0)/float(doors)
+    for i in range(doors):
+        var x0: float = -hw+2.0+dw*float(i)
+        _qy(at,hd+0.01,x0+1.2,x0+dw-1.2,5.5,h-5.5,col.darkened(0.30))
+        _qy(at,hd+0.02,x0+2.6,x0+dw-2.6,7.0,h-7.0,col.darkened(0.15))
+        var kx: float = x0+dw-4.0 if i%2 == 0 else x0+4.0
+        cv.draw_line(_wp(at,kx,hd,h-9),_wp(at,kx,hd,h-12),Color("b8b6ae"),1.4)
+    _prism(at,-hw-1.5,-hd-1.5,hw+1.5,hd+1.5,h-2.5,h,Color("9aa2a7"))
+    cv.draw_line(_wp(at,-hw+4,hd-4,h),_wp(at,hw-12,-hd+6,h),Color(1,1,1,0.18),1.0,true)
+    _qtop(at,hw-26,-hd+5,hw-8,hd-12,h+0.1,Color("6e5338"))
+    # Mancha, cutelo cravado e ganchos (o que ninguem limpou).
+    var kt: Vector2 = screen(at)+Vector2(0,-h)
+    poly([kt+Vector2(-22,-5),kt+Vector2(-6,-10),kt+Vector2(12,-2),kt+Vector2(-2,6)],Color("3d0a14"))
+    poly([kt+Vector2(8,-4),kt+Vector2(16,-7),kt+Vector2(24,-1),kt+Vector2(14,4)],Color("5c1420"))
+    cv.draw_circle(kt+Vector2(16,-3),3.0,Color("7a2231"))
+    cv.draw_line(kt+Vector2(-14,-6),kt+Vector2(-9,-21),Color("4a3527"),3.0)
+    poly([kt+Vector2(-15,-6),kt+Vector2(-12,-15),kt+Vector2(-23,-13),kt+Vector2(-25,-5)],Color("aab3ba"))
+    cv.draw_line(kt+Vector2(-25,-5),kt+Vector2(-15,-6),Color("5c0f1d"),1.4)
+    for hx in [-30.0, 30.0]:
+        var hook: Vector2 = kt+Vector2(hx,-46+sin(g.real_time*1.1+hx)*1.5)
+        cv.draw_line(hook+Vector2(0,-60),hook,Color("56515c"),1.2)
+        cv.draw_arc(hook+Vector2(0,4),4.0,-PI*0.5,PI,10,Color("8b8791"),1.6)
+    var drop: float = fposmod(g.real_time*0.7,1.0)
+    cv.draw_circle(kt+Vector2(-30,-36+drop*30.0),1.3,Color(0.42,0.04,0.09,1.0-drop))
+
+func _bed(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Cama de casal: cabeceira entalhada, colchao, travesseiros, cobertor
+    ## caindo pelas laterais e pezeira. Algo respira debaixo do lencol.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    var wood: Color = Color("4a2f24")
+    _prism(at,-hw-4,-hd,-hw,hd,0,h+26,wood)
+    for py in [-hd, hd-3.0]:
+        _prism(at,-hw-5,py-0.5,-hw+1,py+3.5,0,h+30,wood.darkened(0.1))
+        cv.draw_circle(_wp(at,-hw-2,py+1.5,h+31.5),2.4,wood.lightened(0.1))
+    for i in range(1,5):
+        var yy: float = -hd+d*float(i)/5.0
+        cv.draw_line(_wp(at,-hw,yy,h+3),_wp(at,-hw,yy,h+22),wood.darkened(0.35),1.0)
+    _prism(at,-hw,-hd,hw,hd,2,8,wood)
+    _prism(at,-hw+1,-hd+1,hw-1,hd-1,8,h,Color("cbc2c4"))
+    # Cobertor sobre 2/3 da cama, caindo pelas faces.
+    var bx: float = -hw+w*0.36
+    _qtop(at,bx,-hd-1,hw+0.5,hd+1,h+1.2,col.lightened(0.05))
+    _qy(at,hd+1,bx,hw+0.5,6,h+1.2,col.darkened(0.15))
+    _qx(at,hw+0.5,hd+1,-hd-1,6,h+1.2,col.darkened(0.35))
+    cv.draw_line(_wp(at,bx,-hd-1,h+1.2),_wp(at,bx,hd+1,h+1.2),col.lightened(0.25),1.4,true)
+    for i in range(1,4):
+        var fx: float = bx+(hw-bx)*float(i)/4.0
+        cv.draw_line(_wp(at,fx,hd+1,h),_wp(at,fx+1,hd+1,7),col.darkened(0.3),0.8)
+    # Dois travesseiros fofos junto da cabeceira.
+    for py in [-hd+4.0, 2.0]:
+        _shape([_wp(at,-hw+3,py,h+2),_wp(at,-hw+3,py+(hd-6.0),h+2),_wp(at,-hw+17,py+(hd-6.0),h+3),_wp(at,-hw+17,py,h+3),_wp(at,-hw+10,py-1,h+6)],Color("e2d8da"),false)
+    # A coisa debaixo do cobertor.
+    var bt: Vector2 = _wp(at,hw*0.25,0,h)
+    var breath: float = 1.0+0.13*sin(g.real_time*1.3)
+    cv.draw_set_transform(bt+Vector2(0,-1.0-2.0*breath),0.46,Vector2(1.0,0.55*breath))
+    cv.draw_circle(Vector2(2,0),13.0,col.darkened(0.12))
+    cv.draw_circle(Vector2(0,-2),12.0,col.lightened(0.08))
+    cv.draw_circle(Vector2(18,-1),8.0,col.lightened(0.08))
+    cv.draw_circle(Vector2(-17,-2),6.5,col.lightened(0.12))
+    cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    poly([bt+Vector2(-6,3),bt+Vector2(6,1),bt+Vector2(12,9),bt+Vector2(0,13)],Color(0.30,0.03,0.08,0.75))
+    _prism(at,hw,-hd,hw+3,hd,0,h+7,wood)
+    cv.draw_circle(_wp(at,hw+1.5,hd-1.5,h+8.5),2.0,wood.lightened(0.1))
+
+func _dresser_mirror(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Penteadeira com gavetas e um espelho oval de moldura dourada.
+    ## Quando o puzzle e resolvido, o vidro esta estilhacado.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    var top: float = 18.0
+    var gold: Color = Color("8b6f4e")
+    # Espelho (fica atras, apoiado na parede do fundo).
+    var my: float = -hd+3.0
+    var mz: float = top+h*0.5
+    var outer: PackedVector2Array = PackedVector2Array()
+    var inner: PackedVector2Array = PackedVector2Array()
+    for k in range(28):
+        var a: float = TAU*float(k)/28.0
+        outer.append(_wp(at,cos(a)*(hw-5),my,mz+sin(a)*(h*0.5)))
+        inner.append(_wp(at,cos(a)*(hw-9),my,mz+sin(a)*(h*0.5-4)))
+    cv.draw_colored_polygon(outer,gold)
+    cv.draw_colored_polygon(inner,Color("1d2a33") if g.mirror_open else Color("6f8794"))
+    if not g.mirror_open:
+        for k in range(3):
+            var u: float = -hw*0.4+float(k)*7.0
+            cv.draw_line(_wp(at,u,my,mz-10),_wp(at,u+8,my,mz+12),Color(1,1,1,0.22),1.6,true)
+    else:
+        var cc: Vector2 = _wp(at,3,my,mz+4)
+        for k in range(8):
+            var a2: float = TAU*float(k)/8.0+0.3
+            var e1: Vector2 = cc+Vector2.from_angle(a2)*(8.0+_h(float(k),1.0)*6.0)
+            cv.draw_line(cc,e1,Color(0.85,0.9,0.95,0.6),0.8,true)
+            cv.draw_line(e1,e1+Vector2.from_angle(a2+0.5)*6.0,Color(0.85,0.9,0.95,0.4),0.6,true)
+    cv.draw_polyline(outer,gold.lightened(0.25),0.8,true)
+    # Penteadeira: tampo, tres gavetas na frente, pes curtos.
+    for corner in [Vector2(-1,1),Vector2(1,1),Vector2(1,-1)]:
+        _prism(at,corner.x*(hw-3)-1.5,corner.y*(hd-3)-1.5,corner.x*(hw-3)+1.5,corner.y*(hd-3)+1.5,0,4,col.darkened(0.3),false)
+    _prism(at,-hw+1,-hd+1,hw-1,hd-1,4,top-2,col)
+    var dr: int = 3
+    for i in range(dr):
+        var x0: float = -hw+3+(w-6)*float(i)/float(dr)
+        var x1: float = -hw+3+(w-6)*float(i+1)/float(dr)
+        _qy(at,hd-0.99,x0+1,x1-1,6.5,top-4,col.darkened(0.12))
+        cv.draw_circle(_wp(at,(x0+x1)*0.5,hd-1,(top+2.5)*0.5),1.3,Color("c9a15d"))
+    _prism(at,-hw,-hd,hw,hd,top-2,top,col.lightened(0.08))
+    # Escova e um frasco de perfume em cima.
+    _prism(at,hw-12,-2,hw-8,2,top,top+5,Color(0.75,0.55,0.70,0.85),false)
+    cv.draw_circle(_wp(at,hw-10,0,top+6.5),1.4,Color("c9a15d"))
+
+func _altar(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
+    ## Altar de pedra: plinto, corpo com paineis entalhados e laje de tampo.
+    var hw: float = w*0.5
+    var hd: float = d*0.5
+    _prism(at,-hw-3,-hd-3,hw+3,hd+3,0,5,col.darkened(0.25))
+    _prism(at,-hw+2,-hd+2,hw-2,hd-2,5,h-5,col)
+    for pu in [[-hw+6,-3.0],[3.0,hw-6]]:
+        _qy(at,hd-1.99,pu[0],pu[1],9,h-9,col.darkened(0.30))
+        var cx: float = (float(pu[0])+float(pu[1]))*0.5
+        var ring: PackedVector2Array = PackedVector2Array()
+        for k in range(17):
+            var a: float = TAU*float(k)/16.0
+            ring.append(_wp(at,cx+cos(a)*6.0,hd-1.98,(h*0.5)+sin(a)*6.0))
+        cv.draw_polyline(ring,col.darkened(0.55),1.0,true)
+        cv.draw_line(_wp(at,cx,hd-1.98,h*0.5-6),_wp(at,cx,hd-1.98,h*0.5+6),col.darkened(0.55),1.0)
+    _qx(at,hw-1.99,hd-6,-hd+6,9,h-9,col.darkened(0.48))
+    _prism(at,-hw-2,-hd-2,hw+2,hd+2,h-5,h,col.lightened(0.04))
+    for k in range(4):
+        var cx2: float = -hw+w*_h(float(k),5.0)
+        cv.draw_line(_wp(at,cx2,hd+2,h),_wp(at,cx2+3,hd+2,h-4),col.darkened(0.5),0.7,true)
+    # Tampo empocado de sangue velho, que escorre pelas duas fachadas.
+    var lift: Vector2 = Vector2(0,-h)
+    var top: Vector2 = screen(at)+lift
+    var left: Vector2 = screen(at+Vector2(-hw,hd))+lift
+    var front: Vector2 = screen(at+Vector2(hw,hd))+lift
+    var right: Vector2 = screen(at+Vector2(hw,-hd))+lift
+    poly([top+Vector2(-24,-4),top+Vector2(-4,-10),top+Vector2(20,1),top+Vector2(8,10),top+Vector2(-9,5)],Color("3d0a14"))
+    poly([top+Vector2(-10,-3),top+Vector2(2,-6),top+Vector2(10,1),top+Vector2(0,5)],Color("5c0f1d"))
+    for f in [0.16,0.40,0.66,0.88]:
+        var s1: Vector2 = left.lerp(front,f)
+        cv.draw_line(s1,s1+Vector2(0,7.0+fposmod(f*37.0,1.0)*15.0),Color("4a0b17"),2.2)
+    for f in [0.28,0.62]:
+        var s2: Vector2 = right.lerp(front,f)
+        cv.draw_line(s2,s2+Vector2(0,6.0+fposmod(f*53.0,1.0)*13.0),Color("3a0812"),2.0)
+    cv.draw_arc(left+Vector2(6,9),3.0,0,TAU,10,Color("8b8791"),1.3)
+    cv.draw_arc(right+Vector2(-6,9),3.0,0,TAU,10,Color("8b8791"),1.3)
+    if g.ritual_running or g.monster_banished:
+        for i in range(3):
+            gel(cv,top+Vector2(-18+i*18,-8+i*8),6.0,sin(g.real_time*7.0+float(i)*2.0)*0.8)
+
+func _candle(at: Vector2, x: float, y: float, z: float, tall: float) -> void:
+    _prism(at,x-1.3,y-1.3,x+1.3,y+1.3,z,z+tall,Color("d8cdbb"),false)
+    var tip: Vector2 = _wp(at,x,y,z+tall)
+    var flick: float = 1.5+0.4*sin(g.real_time*9.0+x)
+    cv.draw_line(tip,tip+Vector2(0,-1.5),Color("2a2020"),0.8)
+    cv.draw_circle(tip+Vector2(0,-3.0),flick,Color(1.0,0.75,0.38,0.9))
+    cv.draw_circle(tip+Vector2(0,-3.0),flick*3.5,Color(1.0,0.7,0.35,0.10))
+
+func _table_props(obj: Dictionary) -> void:
+    ## O que esta em cima de cada mesa diz que comodo e aquele.
+    if obj["kind"] != "table":
+        return
+    var at: Vector2 = obj["at"]
+    var h: float = obj["h"]
+    var room: String = room_style(int(at.x/TS),int(at.y/TS))
+    match room:
+        "library":
+            for i in range(3):
+                var bc: Color = [Color("6b2a33"),Color("2b4566"),Color("6b5a2a")][i]
+                _prism(at,-30,-8+float(i)*0.6,-12,6,h+float(i)*3.0,h+float(i)*3.0+3.0,bc,false)
+                _qy(at,6.01,-30,-12,h+float(i)*3.0+0.6,h+float(i)*3.0+2.4,Color("d8ccb0"))
+            _candle(at,18,-4,h,7)
+            poly([_wp(at,0,-10,h+0.1),_wp(at,12,-10,h+0.1),_wp(at,12,4,h+0.1),_wp(at,0,4,h+0.1)],Color("cfc3a5"))
+        "kitchen":
+            for px in [-24.0, 0.0, 24.0]:
+                var pc: Vector2 = _wp(at,px,0,h+0.5)
+                cv.draw_set_transform(pc,0.0,Vector2(1.0,0.5))
+                cv.draw_circle(Vector2.ZERO,8.0,Color("bfbcb2"))
+                cv.draw_circle(Vector2.ZERO,5.5,Color("a8a49a"))
+                if px == 0.0:
+                    cv.draw_circle(Vector2(1,0),3.5,Color("4a0b17"))
+                cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+        "bedroom":
+            _candle(at,-8,-6,h,9)
+            _prism(at,4,-4,14,4,h,h+6,Color("5a4a6a"),false)
+        "workshop":
+            # Ferramentas: martelo, serrote e um potinho de pregos.
+            cv.draw_line(_wp(at,-14,-6,h+1),_wp(at,2,4,h+1),Color("6b4a33"),2.2)
+            _prism(at,0,2,5,6,h,h+3,Color("6c6f78"),false)
+            poly([_wp(at,8,-10,h+0.5),_wp(at,22,-6,h+0.5),_wp(at,20,-2,h+0.5),_wp(at,6,-6,h+0.5)],Color("a7adb3"))
+            _prism(at,-20,6,-15,11,h,h+5,Color("4a4f58"),false)
+        "foyer":
+            pass   # a carta e o vaso ficam por conta dos objetos de cena
+        _:
+            _candle(at,0,0,h,8)
+
+func _wardrobe(at: Vector2) -> void:
+    ## Guarda-roupa de duas portas, com almofadas, puxadores e uma fresta.
+    _ground_shadow(at,30,26)
+    var wood: Color = Color("4b382e")
+    for corner in [Vector2(-1,1),Vector2(1,1),Vector2(1,-1)]:
+        _prism(at,corner.x*12-1.5,corner.y*10-1.5,corner.x*12+1.5,corner.y*10+1.5,0,3,wood.darkened(0.3),false)
+    _prism(at,-14,-12,14,12,3,47,wood)
+    for side in [0, 1]:
+        var x0: float = -13.0+13.0*float(side)
+        var x1: float = x0+13.0
+        _qy(at,12.01,x0+1.0,x1-1.0,5,45,wood.darkened(0.08))
+        _qy(at,12.02,x0+2.6,x1-2.6,26,42,wood.darkened(0.28))
+        _qy(at,12.02,x0+2.6,x1-2.6,8,23,wood.darkened(0.28))
+        cv.draw_line(_wp(at,x0+2.6,12,42),_wp(at,x1-2.6,12,42),wood.lightened(0.15),0.7)
+    cv.draw_line(_wp(at,0,12,5),_wp(at,0,12,45),Color(0,0,0,0.85),1.4)
+    for kx in [-2.2, 2.2]:
+        cv.draw_circle(_wp(at,kx,12,25),1.2,Color("c9a15d"))
+    _prism(at,-15.5,-13,15.5,13.5,47,50,wood.lightened(0.06))
+    var eye: float = 0.5+0.5*sin(g.real_time*0.6)
+    if eye > 0.93:
+        cv.draw_circle(_wp(at,0.6,12,33),0.8,Color(0.9,0.2,0.3,0.8))
+
+func _battery(at: Vector2) -> void:
+    ## Pilha grande deitada no chao: corpo verde, polo de cobre e rotulo.
+    var p: Vector2 = screen(at)
+    cv.draw_circle(p+Vector2(0,-6),13.0,Color(.30,1.0,.76,.12+.05*sin(g.real_time*3.0+at.x)))
+    var a: Vector2 = _wp(at,-7,0,3.2)
+    var b: Vector2 = _wp(at,6,0,3.2)
+    cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    _oval(screen(at)+Vector2(0,1),10,3.5,Color(0,0,0,0.35))
+    _limb(a,b,3.4,3.4,Color("2f9c76"))
+    _limb(b,_wp(at,9,0,3.2),3.4,3.4,Color("c98a3c"))
+    cv.draw_circle(_wp(at,10.5,0,3.2),1.4,Color("e0b070"))
+    cv.draw_line(_wp(at,-1,0,0.2),_wp(at,-1,0,6.2),Color("1d5e48"),1.4)
+    cv.draw_line(a+Vector2(0,-2.4),b+Vector2(0,-2.4),Color(1,1,1,0.35),0.8)
+    _text(_wp(at,-5,0,6.5)+Vector2(-1,5),"+",8,Color("e8f5ee"))
+
+func _bottle(at: Vector2) -> void:
+    ## Garrafa de vidro verde arremessada como distracao.
+    var p: Vector2 = screen(at)
+    _oval(p+Vector2(0,1),6,2.5,Color(0,0,0,0.35))
+    _shape([p+Vector2(-4.5,0),p+Vector2(4.5,0),p+Vector2(5,-10),p+Vector2(2,-14),p+Vector2(1.6,-20),p+Vector2(-1.6,-20),p+Vector2(-2,-14),p+Vector2(-5,-10)],Color(0.35,0.62,0.48,0.85),false)
+    cv.draw_rect(Rect2(p+Vector2(-2,-23),Vector2(4,3)),Color("6b4a33"))
+    cv.draw_line(p+Vector2(-2.5,-2),p+Vector2(-2.5,-11),Color(1,1,1,0.45),1.0)
+    cv.draw_arc(p+Vector2(0,-10),17,0,TAU,28,Color(.70,.83,1,.30),2)
+
+func _scene_object(obj: Dictionary) -> void:
+    var at: Vector2 = obj["at"]
+    var p: Vector2 = screen(at)
+    var kind: String = obj["kind"]
+    match kind:
+        "fragment":
+            # Os "fragmentos" sao os silicones das sacrificadas: tremem e pulsam.
+            var idx: int = int(obj["idx"])
+            var v: float = g.fragment_pulse(idx)
+            cv.draw_circle(p+Vector2(0,-8),17.0+7.0*v,Color(1.0,.70,.80,.08+.14*v))
+            gel(cv,p+Vector2(0,-2),11.0,sin(g.real_time*5.0+float(idx)*1.7)*(0.7+1.6*v))
+        "key": _key(p)
+        "book": _lectern(at,int(obj["number"]))
+        "seal": _seal(p,int(obj["number"]))
+        "box": _music_box(at)
+        "letter": _letter(p+Vector2(0,-19))
+        "note": _note(p)
+        "vase": _vase(p+Vector2(0,-15))
+        "door": _foyer_door(at)
+        "lens": _lens(p)
+        "clue":
+            cv.draw_circle(p+Vector2(0,-19),19,Color(.64,.42,.96,.26))
+            cv.draw_arc(p+Vector2(0,-19),16,0,TAU,32,Color("bca1ff"),2.0)
+            _text(p+Vector2(-7,-13),"?",17,Color("f5deff"))
+
+func _key(p: Vector2) -> void:
+    ## Chave de latao antiga deitada no chao: argola vazada, haste e dentes.
+    var gold: Color = Color("d9b25f")
+    var dark: Color = Color("7a5a24")
+    _floor_matrix(p,0.6)
+    cv.draw_circle(Vector2(1,1.5),7.5,Color(0,0,0,0.30))
+    cv.draw_arc(Vector2(-6,0),4.6,0,TAU,18,dark,3.2)
+    cv.draw_arc(Vector2(-6,0),4.6,0,TAU,18,gold,2.0)
+    cv.draw_circle(Vector2(-6,0),1.2,dark)
+    cv.draw_line(Vector2(-1.5,0),Vector2(13,0),dark,2.8)
+    cv.draw_line(Vector2(-1.5,0),Vector2(13,0),gold,1.6)
+    cv.draw_rect(Rect2(Vector2(9,0),Vector2(2,4)),gold)
+    cv.draw_rect(Rect2(Vector2(12,0),Vector2(1.6,3)),gold)
+    cv.draw_line(Vector2(-0.8,-2),Vector2(-0.8,2),gold,1.4)
+    cv.draw_set_transform_matrix(Transform2D.IDENTITY)
+    var tw: float = 0.5+0.5*sin(g.real_time*4.0)
+    var sp: Vector2 = p+Vector2(-4,-4)
+    cv.draw_line(sp+Vector2(-3*tw,0),sp+Vector2(3*tw,0),Color(1,0.95,0.75,0.8),0.8)
+    cv.draw_line(sp+Vector2(0,-3*tw),sp+Vector2(0,3*tw),Color(1,0.95,0.75,0.8),0.8)
+
+func _lectern(at: Vector2, number: int) -> void:
+    ## Atril de madeira com um livro aberto; o numero romano marca a ordem.
+    var wood: Color = Color("5a3b2a")
+    _ground_shadow(at,14,12,0.3)
+    _prism(at,-6,-5,6,5,0,2,wood.darkened(0.1))
+    _prism(at,-1.5,-1.5,1.5,1.5,2,15,wood)
+    var tl: Vector2 = _wp(at,-8,-6,20)
+    var tr: Vector2 = _wp(at,8,-6,20)
+    var br: Vector2 = _wp(at,8,5,14)
+    var bl: Vector2 = _wp(at,-8,5,14)
+    poly([tl,tr,br,bl],wood.lightened(0.05))
+    poly([bl,br,br+Vector2(0,2),bl+Vector2(0,2)],wood.darkened(0.3))
+    var cover: Color = Color("7d2f3e") if number % 2 else Color("2f5a66")
+    var m0: Vector2 = tl.lerp(tr,0.5)
+    var m1: Vector2 = bl.lerp(br,0.5)
+    poly([tl.lerp(bl,0.08).lerp(tr,0.06),tl.lerp(tr,0.94).lerp(br,0.08),bl.lerp(br,0.94).lerp(tr,0.08),bl.lerp(tl,0.08).lerp(br,0.06)],cover)
+    poly([tl.lerp(bl,0.12).lerp(tr,0.1),m0+Vector2(0,0.8),m1+Vector2(0,-0.8),bl.lerp(tl,0.12).lerp(br,0.1)],Color("e3d7bb"))
+    poly([m0+Vector2(0,0.8),tl.lerp(tr,0.9).lerp(br,0.12),bl.lerp(br,0.9).lerp(tr,0.12),m1+Vector2(0,-0.8)],Color("d6c9ac"))
+    cv.draw_line(m0,m1,Color("8a7a5c"),0.8)
+    for k in range(4):
+        var f: float = 0.25+float(k)*0.17
+        cv.draw_line(tl.lerp(bl,f).lerp(m0.lerp(m1,f),0.15),tl.lerp(bl,f).lerp(m0.lerp(m1,f),0.8),Color(0.3,0.25,0.2,0.45),0.5)
+        cv.draw_line(m0.lerp(m1,f).lerp(tr.lerp(br,f),0.2),m0.lerp(m1,f).lerp(tr.lerp(br,f),0.85),Color(0.3,0.25,0.2,0.45),0.5)
+    cv.draw_line(m1,m1+Vector2(1,7),Color("8c2030"),1.2)
+    var roman: String = ["I","II","III"][clampi(number-1,0,2)]
+    var tw: float = ThemeDB.fallback_font.get_string_size(roman,HORIZONTAL_ALIGNMENT_LEFT,-1,11).x
+    _text(_wp(at,0,-6,26)+Vector2(-tw*0.5,0),roman,11,Color("e8cf8f"))
+
+func _seal(p: Vector2, number: int) -> void:
+    ## Selo de pedra no piso: disco entalhado com runas e o numeral no centro.
+    var lit: bool = number in g.mirror_sequence
+    var ink: Color = Color("c4adff") if lit else Color("8a7d94")
+    _floor_matrix(p,0.0)
+    if lit:
+        cv.draw_circle(Vector2.ZERO,19.0,Color(0.6,0.45,1.0,0.22+0.08*sin(g.real_time*5.0)))
+    cv.draw_circle(Vector2.ZERO,14.5,Color("2c2733"))
+    cv.draw_circle(Vector2.ZERO,13.0,Color("4a4352"))
+    cv.draw_arc(Vector2.ZERO,11.0,0,TAU,32,ink,1.0)
+    cv.draw_arc(Vector2.ZERO,6.5,0,TAU,24,ink,0.8)
+    for k in range(10):
+        var a: float = TAU*float(k)/10.0
+        var r0: Vector2 = Vector2.from_angle(a)*7.6
+        var r1: Vector2 = Vector2.from_angle(a)*10.2
+        cv.draw_line(r0,r1,ink,0.8)
+        cv.draw_line(r1,Vector2.from_angle(a+0.18)*8.8,ink,0.6)
+    var roman: String = ["I","II","III"][clampi(number-1,0,2)]
+    var font: Font = ThemeDB.fallback_font
+    var tw: float = font.get_string_size(roman,HORIZONTAL_ALIGNMENT_LEFT,-1,9).x
+    cv.draw_string(font,Vector2(-tw*0.5,3.2),roman,HORIZONTAL_ALIGNMENT_LEFT,-1,9,Color("f1e0ff") if lit else Color("bdb0c8"))
+    cv.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _music_box(at: Vector2) -> void:
+    ## Caixa de musica de madeira com frisos dourados e manivela.
+    ## Aberta, mostra o veludo vermelho e a bailarina girando.
+    var wood: Color = Color("6b3e2a")
+    var gold: Color = Color("c9a15d")
+    _ground_shadow(at,26,20,0.3)
+    for corner in [Vector2(-1,1),Vector2(1,1),Vector2(1,-1)]:
+        cv.draw_circle(_wp(at,corner.x*11,corner.y*8,1.0),1.6,gold.darkened(0.3))
+    if g.musicbox_open:
+        # Tampa aberta para tras, forrada de veludo, com espelhinho.
+        var l0: Vector2 = _wp(at,-12,-9,13)
+        var l1: Vector2 = _wp(at,12,-9,13)
+        var l2: Vector2 = _wp(at,12,-14,30)
+        var l3: Vector2 = _wp(at,-12,-14,30)
+        poly([l0,l1,l2,l3],wood.darkened(0.2))
+        poly([l0.lerp(l2,0.08),l1.lerp(l3,0.08),l2.lerp(l0,0.08),l3.lerp(l1,0.08)],Color("6a1a26"))
+        poly([l0.lerp(l2,0.3),l1.lerp(l3,0.3),l2.lerp(l0,0.3),l3.lerp(l1,0.3)],Color("8fa3ad"))
+    _prism(at,-12,-9,12,9,2,13,wood)
+    cv.draw_line(_wp(at,-12,9,4),_wp(at,12,9,4),gold,1.0)
+    cv.draw_line(_wp(at,12,9,4),_wp(at,12,-9,4),gold.darkened(0.2),1.0)
+    cv.draw_line(_wp(at,-12,9,11.5),_wp(at,12,9,11.5),gold,1.0)
+    cv.draw_line(_wp(at,12,9,11.5),_wp(at,12,-9,11.5),gold.darkened(0.2),1.0)
+    var kh: Vector2 = _wp(at,0,9,8)
+    cv.draw_circle(kh,1.6,gold)
+    cv.draw_line(kh,kh+Vector2(0,2.2),Color("1a1010"),0.8)
+    # Manivela na lateral.
+    var crank: Vector2 = _wp(at,12,0,7.5)
+    var turn: float = g.real_time*3.0 if g.musicbox_open else 0.0
+    var arm: Vector2 = crank+Vector2(cos(turn)*3.0+3.0,sin(turn)*3.0-1.0)
+    cv.draw_line(crank,crank+Vector2(3,-1),gold.darkened(0.2),1.4)
+    cv.draw_line(crank+Vector2(3,-1),arm,gold,1.4)
+    cv.draw_circle(arm,1.3,Color("3a2018"))
+    if g.musicbox_open:
+        _qtop(at,-10,-7,10,7,13.1,Color("7a1f2c"))
+        # Bailarina de porcelana girando no centro.
+        var bc: Vector2 = _wp(at,0,0,13)
+        var spin: float = cos(g.real_time*4.0)
+        cv.draw_line(bc,bc+Vector2(0,-4),Color("d8cdbb"),0.8)
+        poly([bc+Vector2(-4.0*absf(spin)-1.0,-5),bc+Vector2(4.0*absf(spin)+1.0,-5),bc+Vector2(0,-8)],Color("e6b8c6"))
+        cv.draw_line(bc+Vector2(0,-8),bc+Vector2(0,-11),Color("efe4dc"),1.2)
+        cv.draw_line(bc+Vector2(0,-10),bc+Vector2(3.0*spin,-13),Color("efe4dc"),0.7)
+        cv.draw_line(bc+Vector2(0,-10),bc+Vector2(-3.0*spin,-13),Color("efe4dc"),0.7)
+        cv.draw_circle(bc+Vector2(0,-12.5),1.4,Color("efe4dc"))
+    else:
+        _prism(at,-12.5,-9.5,12.5,9.5,13,15,wood.lightened(0.06))
+        var c0: Vector2 = _wp(at,0,0,15)
+        cv.draw_set_transform(c0,0.0,Vector2(1.0,0.5))
+        cv.draw_arc(Vector2.ZERO,6.0,0,TAU,20,gold,1.0)
+        cv.draw_circle(Vector2.ZERO,2.0,gold)
+        cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+
+func _letter(lp: Vector2) -> void:
+    ## Envelope aberto com lacre de cera vermelha e a carta saindo dele.
+    var read: bool = g.letter_read
+    if not read:
+        cv.draw_circle(lp,14.0+2.5*sin(g.real_time*3.0),Color(1,.93,.72,.13))
+    _floor_matrix(lp,0.25)
+    var paper: Color = Color("eadfc4") if not read else Color("a59c8a")
+    cv.draw_rect(Rect2(Vector2(-9,-6),Vector2(18,12)),Color(0,0,0,0.25))
+    cv.draw_rect(Rect2(Vector2(-6,-11),Vector2(14,12)),paper.lightened(0.05))
+    for k in range(4):
+        cv.draw_line(Vector2(-4,-9+float(k)*2.2),Vector2(5,-9+float(k)*2.2),Color(0.25,0.2,0.2,0.5),0.5)
+    cv.draw_rect(Rect2(Vector2(-10,-7),Vector2(18,12)),paper)
+    cv.draw_polyline(PackedVector2Array([Vector2(-10,-7),Vector2(-1,0),Vector2(8,-7)]),paper.darkened(0.25),0.8)
+    cv.draw_line(Vector2(-10,5),Vector2(-3,-1),paper.darkened(0.18),0.6)
+    cv.draw_line(Vector2(8,5),Vector2(1,-1),paper.darkened(0.18),0.6)
+    cv.draw_circle(Vector2(-1,0),2.4,Color("8a1f2c"))
+    cv.draw_circle(Vector2(-1.4,-0.4),0.8,Color("c0404f"))
+    cv.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _note(p: Vector2) -> void:
+    ## Bilhete amassado no chao: papel dobrado em vincos, rabiscado.
+    var paper: Color = Color("d8ceb4") if not g.note_read else Color("94907f")
+    _floor_matrix(p+Vector2(0,-1),-0.4)
+    cv.draw_colored_polygon(PackedVector2Array([Vector2(-8,-5),Vector2(-2,-7),Vector2(7,-6),Vector2(9,0),Vector2(6,6),Vector2(-1,5),Vector2(-7,7),Vector2(-9,1)]),paper)
+    cv.draw_polyline(PackedVector2Array([Vector2(-8,-5),Vector2(-1,0),Vector2(6,6)]),paper.darkened(0.2),0.7)
+    cv.draw_polyline(PackedVector2Array([Vector2(-2,-7),Vector2(-1,0),Vector2(-7,7)]),paper.darkened(0.15),0.6)
+    for k in range(3):
+        cv.draw_polyline(PackedVector2Array([Vector2(-5,-3+k*3),Vector2(-2,-4+k*3),Vector2(1,-2.5+k*3),Vector2(4,-3.5+k*3)]),Color(0.2,0.15,0.2,0.6),0.5)
+    cv.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _vase(vp: Vector2) -> void:
+    ## Vaso de porcelana barrigudo, com faixa pintada e flores murchas.
+    var porcelain: Color = Color("7f8fa6")
+    cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    _oval(vp+Vector2(1,0.5),7,2.5,Color(0,0,0,0.35))
+    _shape([vp+Vector2(-3.5,0),vp+Vector2(3.5,0),vp+Vector2(6.8,-5),vp+Vector2(6.4,-10),vp+Vector2(3,-13.5),vp+Vector2(2.6,-16),vp+Vector2(4.2,-17.5),vp+Vector2(-4.2,-17.5),vp+Vector2(-2.6,-16),vp+Vector2(-3,-13.5),vp+Vector2(-6.4,-10),vp+Vector2(-6.8,-5)],porcelain,false)
+    cv.draw_polyline(PackedVector2Array([vp+Vector2(-6.6,-7),vp+Vector2(-3,-6),vp+Vector2(3,-6),vp+Vector2(6.6,-7)]),Color("2c3c6a"),1.6,true)
+    for k in range(4):
+        cv.draw_circle(vp+Vector2(-4.5+float(k)*3.0,-9.5),0.7,Color("2c3c6a"))
+    cv.draw_line(vp+Vector2(-4.2,-3),vp+Vector2(-4.6,-10),Color(1,1,1,0.4),1.0,true)
+    var stems: Array = [[-5.0,-27.0,0.4],[0.0,-30.0,-0.2],[5.5,-26.0,0.5],[-2.5,-24.0,0.9]]
+    for s in stems:
+        var tip: Vector2 = vp+Vector2(float(s[0]),float(s[1]))
+        var mid: Vector2 = vp+Vector2(float(s[0])*0.5,-21)
+        cv.draw_polyline(PackedVector2Array([vp+Vector2(0,-16),mid,tip]),Color("4c5b3c"),1.0,true)
+        var droop: Vector2 = tip+Vector2(float(s[2])*4.0,3.0)
+        cv.draw_line(tip,droop,Color("4c5b3c"),0.9,true)
+        for pk in range(4):
+            var pa: float = TAU*float(pk)/4.0+float(s[2])
+            _oval(droop+Vector2.from_angle(pa)*1.7,1.5,1.0,Color("6a2a3e"),pa)
+        cv.draw_circle(droop,0.9,Color("3a2a1a"))
+    _oval(vp+Vector2(-2.5,-20),2.4,1.0,Color("5d6a3a"),-0.6)
+    _oval(vp+Vector2(3,-19),2.2,0.9,Color("5d6a3a"),0.7)
+    for k in range(3):
+        _oval(vp+Vector2(-9+float(k)*8.0,1.5+float(k%2)),1.3,0.7,Color("6a2a3e"),float(k))
+
+func _foyer_door(at: Vector2) -> void:
+    ## Porta do vestibulo para o salao: batente, almofadas, macaneta e fechadura.
+    bake_wall(int(at.x/TS),int(at.y/TS))
+    var wood: Color = Color("5a3b2c")
+    _qy(at,16.02,-13,13,0,35,Color("2a1d17"))
+    _qy(at,16.03,-11,11,0,33,wood)
+    for pz in [[4.0,15.0],[18.0,30.0]]:
+        _qy(at,16.04,-8.5,-1.5,pz[0],pz[1],wood.darkened(0.25))
+        _qy(at,16.04,1.5,8.5,pz[0],pz[1],wood.darkened(0.25))
+    var glint: bool = g.foyer_key_owned
+    var knob: Vector2 = _wp(at,7.5,16.05,17)
+    cv.draw_circle(knob,1.8,Color("e1bc79") if glint else Color("8d7a5c"))
+    _qy(at,16.05,6.6,8.4,12.5,15.5,Color("2a2018"))
+    if glint:
+        cv.draw_circle(knob,5.0+sin(g.real_time*4.0),Color(1,0.85,0.5,0.15))
+
+func _lens(p: Vector2) -> void:
+    ## Lente estranha num aro de latao com runas, pousada num suporte.
+    var la: float = 0.7+0.3*sin(g.real_time*3.4)
+    var c: Vector2 = p+Vector2(0,-12)
+    _oval(p+Vector2(0,1),7,2.5,Color(0,0,0,0.35))
+    cv.draw_line(p,c+Vector2(0,8),Color("6b5a3a"),2.0)
+    cv.draw_line(p+Vector2(-4,0),p+Vector2(4,0),Color("6b5a3a"),2.0)
+    cv.draw_circle(c,15.0,Color(.62,.40,.98,.14*la))
+    cv.draw_circle(c,8.6,Color("8a6a2a"))
+    cv.draw_circle(c,6.6,Color(0.55,0.42,0.85,0.85))
+    cv.draw_circle(c+Vector2(-1.5,-1.5),2.6,Color(0.9,0.85,1.0,0.35+0.3*la))
+    for k in range(8):
+        var a: float = TAU*float(k)/8.0+g.real_time*0.4
+        cv.draw_line(c+Vector2.from_angle(a)*7.0,c+Vector2.from_angle(a)*8.2,Color("e8d08f"),0.8)
+
+func _labeled_door() -> void:
+    ## Porta da frente: dupla, almofadada, com bandeira de vidro em cima.
+    ## Aberta (fim do jogo), a luz de fora entra pelo vao.
+    var at: Vector2 = g.tile(26,34)
+    var free: bool = g.monster_banished
+    var wood: Color = Color("6b4a33") if free else Color("4a3340")
+    _prism(at,-20,-10,20,10,0,41,Color("2a1e1a"))
+    if free:
+        _qy(at,10.01,-16,16,0,33,Color(1.0,0.86,0.6,0.85))
+        _qy(at,10.02,-16,-11,0,33,wood)
+        _qy(at,10.02,11,16,0,33,wood)
+    else:
+        for side in [-1.0, 1.0]:
+            var x0: float = -16.0 if side < 0.0 else 0.4
+            var x1: float = -0.4 if side < 0.0 else 16.0
+            _qy(at,10.01,x0,x1,0,33,wood)
+            _qy(at,10.02,x0+2.5,x1-2.5,4,15,wood.darkened(0.25))
+            _qy(at,10.02,x0+2.5,x1-2.5,18,29,wood.darkened(0.25))
+            cv.draw_circle(_wp(at,side*-2.6,10.03,17),1.4,Color("c9a15d"))
+    _qy(at,10.02,-16,16,34,39,Color(0.55,0.45,0.30,0.6) if free else Color("1b2026"))
+    for k in range(1,4):
+        var fx: float = -16.0+32.0*float(k)/4.0
+        cv.draw_line(_wp(at,fx,10.03,34),_wp(at,fx,10.03,39),Color("2a1e1a"),0.8)
+    var p: Vector2 = screen(at)
+    _text(p+Vector2(-17,-62),"SAÍDA",12,Color("ebd6b3"))

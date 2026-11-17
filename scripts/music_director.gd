@@ -1,6 +1,6 @@
 extends Node
 ## Trilhas originais em camadas. A intensidade depende dos fragmentos;
-## a canção da Ygona depende da distância, com transições contínuas.
+## a canção de Afrodite depende da distância, com transições contínuas.
 
 var ambient_players: Array = []
 var stalker: AudioStreamPlayer
@@ -34,8 +34,8 @@ func _ready() -> void:
         add_child(ap)
         ambient_players.append(ap)
     stalker = AudioStreamPlayer.new()
-    stalker.name = "Tema_da_Ygona"
-    stalker.stream = _load_loop("res://assets/audio/ygona_theme.wav")
+    stalker.name = "Tema_de_Afrodite"
+    stalker.stream = _load_loop("res://assets/audio/afrodite_theme.wav")
     stalker.volume_db = -65.0
     add_child(stalker)
     theme = AudioStreamPlayer.new()

@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://ddukkc1la4er1"
-path="res://.godot/imported/ygona_theme.wav-4e017a0c093f7a60175009ac06d89e76.sample"
+path="res://.godot/imported/afrodite_theme.wav-a7894fd0b9079a336fe7660241e310fa.sample"
 
 [deps]
 
-source_file="res://assets/audio/ygona_theme.wav"
-dest_files=["res://.godot/imported/ygona_theme.wav-4e017a0c093f7a60175009ac06d89e76.sample"]
+source_file="res://assets/audio/afrodite_theme.wav"
+dest_files=["res://.godot/imported/afrodite_theme.wav-a7894fd0b9079a336fe7660241e310fa.sample"]
 
 [params]
 

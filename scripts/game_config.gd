@@ -1,5 +1,5 @@
 extends RefCounted
-## Parametros de design do YGONA SCARE.
+## Parametros de design do AFRODITE SCARE.
 ## Tudo que o GDD marca como [A DEFINIR] / [SUGESTAO] fica aqui para ajuste
 ## rapido, sem precisar mexer na logica em game.gd.
 

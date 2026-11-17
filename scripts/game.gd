@@ -1,8 +1,12 @@
 extends Node2D
-## YGONA SCARE — Godot 4.7, vista 2.5D isometrica a 45 graus.
+## AFRODITE SCARE — Godot 4.7, vista 2.5D isometrica a 45 graus.
 ## Logica de colisao em grade + projecao artistica independente.
 ## Heroina com animacao de tirar/guardar lanterna no decote; os artefatos sao
 ## os silicones das mulheres sacrificadas no altar da entidade.
+## Lore: uma seita tentou trazer a deusa Afrodite por bruxaria. O ritual ficou
+## incompleto, e o que atravessou e uma Afrodite pela metade, rachada e podre,
+## que guarda as oferendas (os silicones) para tentar se completar.
+## Devolve-las ao altar desfaz a invocacao.
 
 const WIDTH: float = 1152.0
 const HEIGHT: float = 720.0
@@ -12,7 +16,7 @@ const PLAYER_RUN: float = 240.0
 const CFG = preload("res://scripts/game_config.gd")
 const DrawLayer = preload("res://scripts/draw_layer.gd")
 
-## As tres mulheres sacrificadas no altar da Ygona (personagens ficticias).
+## As tres mulheres que a seita sacrificou a Afrodite (personagens ficticias).
 ## Os "fragmentos" do codigo sao os silicones delas, guardados como trofeu.
 const VICTIMS: Array = [
 	{"name":"DALVA", "lines":[
@@ -21,8 +25,8 @@ const VICTIMS: Array = [
 		"Na borda, riscado a unha:  D A L V A",
 		"",
 		"Ela lia em voz alta para a casa vazia.",
-		"A Ygona gostou da voz. Deitou-a no altar",
-		"e guardou isto entre os livros, como marcador.",
+		"A seita a ofereceu a Afrodite pela voz,",
+		"e a deusa guardou isto entre os livros, como marcador.",
 		"",
 		"Você o guarda no decote, junto da lanterna."]},
 	{"name":"MARLENE", "lines":[
@@ -31,8 +35,8 @@ const VICTIMS: Array = [
 		"Na borda, riscado a unha:  M A R L E N E",
 		"",
 		"Ela cantava para não ouvir a risada.",
-		"A Ygona a deitou no altar no meio do refrão",
-		"e trancou isto onde a canção nunca termina.",
+		"A seita a deitou no altar no meio do refrão,",
+		"e Afrodite trancou isto onde a canção nunca termina.",
 		"",
 		"Você o aperta no decote, ao lado do outro."]},
 	{"name":"SORAIA", "lines":[
@@ -41,8 +45,8 @@ const VICTIMS: Array = [
 		"Na borda, riscado a unha:  S O R A I A",
 		"",
 		"Ela só queria se ver bonita.",
-		"A Ygona a deitou no altar diante do espelho",
-		"e escondeu isto atrás do próprio reflexo.",
+		"Foi oferecida a Afrodite diante do espelho,",
+		"e a deusa escondeu isto atrás do próprio reflexo.",
 		"",
 		"Não cabe mais nada no decote. Leve as três ao altar."]}
 ]
@@ -138,7 +142,13 @@ var aim_override: Vector2 = Vector2.ZERO   # testes: mira fixa, ignora o mouse
 
 # Assombracoes: nada disto mata sozinho, mas tudo foi feito para dar medo.
 var fear_rect: ColorRect
-var apparition: Dictionary = {}   # Ygona falsa parada no escuro: {"at","seen","ttl"}
+var jumpscare_rect: ColorRect     # chiado/distorcao por cima de tudo durante o susto
+# Mira: se o mouse fica parado enquanto ela anda (ex.: touchpad bloqueado pelo
+# sistema enquanto se digita), a lanterna passa a seguir a direcao do passo
+# ate o mouse voltar a se mexer.
+var last_mouse: Vector2 = Vector2(-1,-1)
+var aim_by_keys: bool = false
+var apparition: Dictionary = {}   # Afrodite falsa parada no escuro: {"at","seen","ttl"}
 var apparition_timer: float = 20.0
 var subliminal: float = 0.0       # segundos restantes do rosto-relampago
 var subliminal_cooldown: float = 0.0
@@ -237,6 +247,20 @@ func _setup_layers() -> void:
 	fear_mat.set_shader_parameter("grain", CFG.FILM_GRAIN)
 	fear_rect.material = fear_mat
 	add_child(fear_rect)
+	# Jumpscare: sinal de TV morrendo por cima de tudo (inclusive do rosto).
+	var top: CanvasLayer = CanvasLayer.new()
+	top.name = "Susto"
+	top.layer = 50
+	add_child(top)
+	jumpscare_rect = ColorRect.new()
+	jumpscare_rect.name = "Chiado"
+	jumpscare_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	jumpscare_rect.size = Vector2(WIDTH, HEIGHT)
+	var js_mat: ShaderMaterial = ShaderMaterial.new()
+	js_mat.shader = load("res://shaders/jumpscare.gdshader")
+	jumpscare_rect.material = js_mat
+	jumpscare_rect.visible = false
+	top.add_child(jumpscare_rect)
 
 func _reset_opening() -> void:
 	power_on = true
@@ -293,7 +317,7 @@ func _create_objects() -> void:
 		{"id":"seal3", "kind":"seal", "label":"Selo III", "at":tile(48, 23), "number":3},
 		{"id":"mirror_clue", "kind":"clue", "label":"Escrita de outro mundo", "at":tile(44, 29)},
 		{"id":"fragment3", "kind":"fragment", "label":"Pegar o silicone de Soraia", "at":tile(44, 27), "idx":2},
-		{"id":"altar", "kind":"altar", "label":"Altar da Ygona", "at":tile(26, 29)},
+		{"id":"altar", "kind":"altar", "label":"Altar de Afrodite", "at":tile(26, 29)},
 		{"id":"exit", "kind":"exit", "label":"Porta da frente", "at":tile(26, 34)},
 		# Abertura (GDD 2.3 / 3.7): carta da maldicao, bilhete, vaso com a chave, porta.
 		{"id":"letter", "kind":"letter", "label":"Ler a carta", "at":tile(22, 32)+Vector2(7,7)},
@@ -321,7 +345,7 @@ func _create_objects() -> void:
 		{"at":tile(42, 13), "text":"TRÊS DE NÓS NO ALTAR"},
 		{"at":tile(27, 10), "text":"ELA NÃO PISCA"}
 	]
-	# As tres continuam penduradas no salao, onde a Ygona as deixou secar.
+	# As tres continuam penduradas no salao, onde a seita as deixou secar.
 	hanged = [{"at":tile(22, 12), "idx":0}, {"at":tile(30, 17), "idx":1}, {"at":tile(23, 23), "idx":2}]
 	mannequins = []
 	for cell in [Vector2i(36,19), Vector2i(42,19), Vector2i(49,19), Vector2i(36,31), Vector2i(45,31)]:
@@ -675,6 +699,12 @@ func _process(delta: float) -> void:
 	fear_rect.material.set_shader_parameter("fear", dread if haunted else 0.0)
 	fear_rect.material.set_shader_parameter("glitch", clampf(glitch + (0.35 if light_jam > 0.0 else 0.0), 0.0, 1.0) if haunted else 0.0)
 	fear_rect.material.set_shader_parameter("clock", fposmod(real_time, 600.0))
+	var scaring: bool = status == "dead" and death_time < CFG.JUMPSCARE_SECONDS
+	jumpscare_rect.visible = scaring
+	if scaring:
+		# Entra no maximo e so alivia um pouco no fim, antes do corte para o preto.
+		jumpscare_rect.material.set_shader_parameter("amount", 1.0 - 0.35*smoothstep(0.55, 1.0, death_time/CFG.JUMPSCARE_SECONDS))
+		jumpscare_rect.material.set_shader_parameter("clock", fposmod(real_time, 600.0))
 	if status != "playing":
 		glitch = maxf(0.0, glitch - delta*2.5)
 		subliminal = maxf(0.0, subliminal - delta)
@@ -685,7 +715,18 @@ func _update_aim() -> void:
 	if aim_override != Vector2.ZERO:
 		look = aim_override.normalized()
 		return
-	var aim_pos: Vector2 = iso_renderer.unproject(get_viewport().get_mouse_position() + camera)
+	var mouse_now: Vector2 = get_viewport().get_mouse_position()
+	if last_mouse.x < 0.0 or mouse_now.distance_to(last_mouse) > 1.5:
+		aim_by_keys = false
+		last_mouse = mouse_now
+	elif moving:
+		aim_by_keys = true
+	if aim_by_keys:
+		# Mouse parado: a lanterna gira suavemente para onde ela esta andando.
+		if moving:
+			look = look.slerp(direction, minf(1.0, get_physics_process_delta_time()*9.0)).normalized()
+		return
+	var aim_pos: Vector2 = iso_renderer.unproject(mouse_now + camera)
 	var to_mouse = aim_pos - player
 	if to_mouse.length() > 7.0:
 		look = to_mouse.normalized()
@@ -757,7 +798,7 @@ func shadow_seconds(dist: float) -> float:
 	return maxf(CFG.SHADOW_MIN_SECONDS, dist*0.92/CFG.SHADOW_SPEED)
 
 func _spawn_apparition() -> bool:
-	## Uma Ygona falsa, parada, num ponto que a jogadora ainda nao iluminou.
+	## Uma Afrodite falsa, parada, num ponto que a jogadora ainda nao iluminou.
 	for attempt in range(14):
 		var ang: float = look.angle() + randf_range(-2.5, 2.5)
 		var raw: Vector2 = player + Vector2.from_angle(ang)*randf_range(150.0, 300.0)
@@ -1017,6 +1058,7 @@ func _die() -> void:
 	deaths += 1
 	# Jumpscare: imagem + audio da entidade (troque assets/audio/jumpscare.wav).
 	music.sfx("jumpscare", 0.0)
+	music.sfx("static", -3.0)
 	scare_flash = 1.2
 	shake = 0.6
 	notify("A entidade encontrou você.", 3.0)
@@ -1039,7 +1081,7 @@ func _update_ritual(dt: float) -> void:
 		monster_banished = true
 		monster_active = false
 		music.sfx("win")
-		notify("ELAS LEVARAM A YGONA. A PORTA DA FRENTE ESTÁ ABERTA!", 8.0)
+		notify("ELAS LEVARAM AFRODITE DE VOLTA AO MAR. A PORTA ESTÁ ABERTA!", 8.0)
 		scare_flash = 0.5
 
 func _nearest_interaction() -> Dictionary:
@@ -1120,7 +1162,7 @@ func _interact() -> void:
 		ghost_mode = false
 		_make_noise(player, 180.0)
 		music.sfx("ghost")
-		notify("Você atravessou a parede. A Ygona não usa essas passagens.")
+		notify("Você atravessou a parede. Afrodite não usa essas passagens.")
 		return
 	if kind == "letter":
 		letter_read = true
@@ -1128,9 +1170,11 @@ func _interact() -> void:
 		_open_reading("CARTA SOBRE A MESA", [
 			"A quem entrar nesta casa:",
 			"",
-			"Ela não morreu aqui. Ela ficou.",
-			"Três mulheres foram deitadas no altar dela.",
-			"De cada uma, a Ygona guardou os silicones como troféu",
+			"Uma seita tentou trazer Afrodite por bruxaria.",
+			"O ritual não terminou: o que veio é só metade dela,",
+			"rachada, podre, procurando o resto.",
+			"Três mulheres foram deitadas no altar como oferenda.",
+			"De cada uma, ela guardou os silicones",
 			"e os escondeu pela mansão.",
 			"",
 			"Enquanto houver luz sobre ela, não dará um passo.",
@@ -1138,8 +1182,8 @@ func _interact() -> void:
 			"QUANDO OUVIR A RISADA, ACENDA A LUZ.",
 			"",
 			"Os silicones pulsam de tempos em tempos, como se ainda",
-			"respirassem. ACHE OS TRÊS e devolva-os ao altar.",
-			"É a única saída.",
+			"respirassem. ACHE OS TRÊS e devolva-os ao altar:",
+			"o ritual se desfaz. É a única saída.",
 			"",
 			"P.S.: deixei um bilhete junto à porta do salão.",
 			"Leia, talvez te ajude a achar a chave."])
@@ -1175,7 +1219,7 @@ func _interact() -> void:
 		ghost_unlocked = true
 		music.sfx("ghost")
 		scare_flash = 0.25
-		notify("Uma lente de outro mundo encaixou na lanterna. F: luz espectral — revela o oculto, mas NÃO paralisa a Ygona.", 7.5)
+		notify("Uma lente de outro mundo encaixou na lanterna. F: luz espectral — revela o oculto, mas NÃO paralisa Afrodite.", 7.5)
 		return
 	if kind == "clue":
 		if id == "lib_clue":
@@ -1219,7 +1263,7 @@ func _interact() -> void:
 			musicbox_open = true
 			_make_noise(player, 750.0)
 			music.sfx("stinger")
-			notify("A caixa tocou sozinha. A Ygona ouviu! Pegue o silicone.", 5.0)
+			notify("A caixa tocou sozinha. Afrodite ouviu! Pegue o silicone.", 5.0)
 			scare_flash = 0.3
 		return
 	if kind == "seal":
@@ -1249,14 +1293,14 @@ func _interact() -> void:
 		shake = 0.22
 		_make_noise(player, 750.0)
 		var total = collected_count()
-		notify("SILICONE %s/3 no decote. A Ygona sentiu falta do troféu!" % total, 5.5)
+		notify("SILICONE %s/3 no decote. Afrodite sentiu falta da oferenda!" % total, 5.5)
 		# A leitura congela a simulacao: um folego antes da perseguicao.
 		_open_reading("SILICONE DE %s — %s/3" % [VICTIMS[index]["name"], total], VICTIMS[index]["lines"])
 		reading_scare = true
 		return
 	if kind == "altar":
 		if monster_banished:
-			notify("A maldição acabou. Vá até a porta da frente!")
+			notify("A invocação se desfez. Vá até a porta da frente!")
 		elif ritual_running:
 			notify("Ritual em andamento! Sobreviva por %s segundos." % int(ceil(ritual_left)))
 		elif collected_count() < 3:
@@ -1313,11 +1357,11 @@ func _throw_bottle() -> void:
 	thrown_bottles.append({"at":at, "ttl":2.1})
 	_make_noise(at, 850.0)
 	music.sfx("stinger")
-	notify("Objeto arremessado: a Ygona ouviu um barulho!", 2.2)
+	notify("Objeto arremessado: Afrodite ouviu um barulho!", 2.2)
 
 func _objective() -> String:
 	if monster_banished:
-		return "A MALDIÇÃO ACABOU — alcance a porta da frente!"
+		return "A INVOCAÇÃO SE DESFEZ — alcance a porta da frente!"
 	if ritual_running:
 		return "SOBREVIVA AO RITUAL: %s s" % int(ceil(ritual_left))
 	if collected_count() == 3:
@@ -1375,7 +1419,7 @@ func _draw_hud() -> void:
 	# Sombras do HUD.
 	draw_rect(Rect2(0,0,WIDTH,103),Color(0.025,0.035,0.06,0.77))
 	draw_rect(Rect2(0,HEIGHT-78,WIDTH,78),Color(0.025,0.035,0.06,0.82))
-	_world_txt(Vector2(25,29),"YGONA SCARE",21,Color("e2c8b7"))
+	_world_txt(Vector2(25,29),"AFRODITE SCARE",21,Color("e2c8b7"))
 	var loc = map.room_name(player)
 	_world_txt(Vector2(25,51),loc,12,Color("9faab8"))
 	_draw_bar(Vector2(25,68),190,12,energy/100.0,Color("9181ce"))
@@ -1402,7 +1446,7 @@ func _draw_hud() -> void:
 		var d = 1.0-clampf(danger/340.0,0,1)
 		draw_rect(Rect2(WIDTH-216,60,180,7),Color("241d2b"))
 		draw_rect(Rect2(WIDTH-216,60,180*d,7),Color("d96a80"))
-		_world_txt(Vector2(WIDTH-215,90),"A YGONA ESTÁ PRÓXIMA",11,Color("dba4ae"))
+		_world_txt(Vector2(WIDTH-215,90),"AFRODITE ESTÁ PRÓXIMA",11,Color("dba4ae"))
 	_world_txt(Vector2(26,HEIGHT-49),_objective(),16,Color("e9e0ce"))
 	var helper = "SETAS ↑ ↓ ← → MOVER  |  MOUSE MIRAR  |  SHIFT CORRER  |  ESPAÇO TIRAR/GUARDAR LANTERNA  |  E INTERAGIR"
 	if ghost_unlocked:
@@ -1427,7 +1471,7 @@ func _draw_hud() -> void:
 		draw_rect(Rect2((WIDTH-w)/2,114,w*ritual_left/CFG.RITUAL_SECONDS,13),Color("d88aab"))
 		_world_txt(Vector2((WIDTH-w)/2+19,150),"MANTENHA-SE VIVO ATÉ O FIM DO RITUAL",14,Color("eecbdf"))
 	if monster_lit and monster_present():
-		_world_txt(Vector2(24,125),"A YGONA NÃO SE MOVE ENQUANTO VOCÊ OLHA!",13,Color("c9dff5"))
+		_world_txt(Vector2(24,125),"AFRODITE NÃO SE MOVE ENQUANTO VOCÊ OLHA!",13,Color("c9dff5"))
 	if show_fps:
 		_world_txt(Vector2(962,126),"FPS: %d" % int(Engine.get_frames_per_second()),13,Color("c2efba"))
 	# Mira discreta.
@@ -1456,10 +1500,10 @@ func _draw_overlay() -> void:
 			peek = 0.55
 		_entity_face(Vector2(WIDTH/2,168),0.92,Color("f0457c"),0.12)
 		draw_rect(Rect2(0,0,WIDTH,430),Color(0.02,0.025,0.045,1.0-peek))
-		_center_text("YGONA SCARE",195,56,Color("ead7c5"))
+		_center_text("AFRODITE SCARE",195,56,Color("ead7c5"))
 		_center_text("SE VOCÊ DESVIAR O OLHAR, ELA SE MOVE",241,18,Color("c1a5b1"))
-		_center_text("Três mulheres foram sacrificadas no altar. Ela guardou os silicones.",314,22,Color("d4cbd5"))
-		_center_text("Ache os três, devolva-os ao altar e saia da mansão.",346,19,Color("aeb9d5"))
+		_center_text("Uma seita tentou invocar Afrodite. O ritual ficou pela metade — e ela também.",314,22,Color("d4cbd5"))
+		_center_text("Ache os silicones das três sacrificadas, devolva-os ao altar e saia da mansão.",346,19,Color("aeb9d5"))
 		_center_text("Fora da luz, tudo é escuro — e é no escuro que ela anda. Quando ouvir a risada, acenda a luz.",378,16,Color("aeb9d5"))
 		draw_rect(Rect2(WIDTH/2-199,437,398,58),Color("5d4056"))
 		_center_text("PRESSIONE ENTER PARA JOGAR",477,23,Color("fff2e5"))
@@ -1473,14 +1517,14 @@ func _draw_overlay() -> void:
 	elif status == "dead":
 		_entity_face(Vector2(WIDTH/2,170),0.62,Color("ef6374"),0.25)
 		draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.02,0.0,0.01,0.55))
-		_center_text("A YGONA DEITOU VOCÊ NO ALTAR",327,45,Color("f4a9ac"))
+		_center_text("AFRODITE DEITOU VOCÊ NO ALTAR",327,45,Color("f4a9ac"))
 		_center_text("Os silicones no seu decote ela ainda não achou. Você continua com eles.",393,20,Color("d8c5c9"))
 		_center_text("Pressione R para reaparecer no vestíbulo",451,22,Color("fff0db"))
 		_center_text("ESC para voltar ao menu",493,16,Color("9c98a8"))
 	elif status == "won":
 		draw_arc(Vector2(WIDTH/2,198),83,0,TAU,60,Color("e1c68a"),3)
-		_center_text("MALDIÇÃO ROMPIDA",217,48,Color("f1dfb7"))
-		_center_text("Dalva, Marlene e Soraia têm de volta o que era delas. E levaram a Ygona.",302,23,Color("dbd1cf"))
+		_center_text("INVOCAÇÃO DESFEITA",217,48,Color("f1dfb7"))
+		_center_text("Dalva, Marlene e Soraia têm de volta o que era delas. Afrodite voltou ao mar.",302,23,Color("dbd1cf"))
 		_center_text("Tempo de fuga: %02d:%02d   •   Vezes no altar: %d" % [int(time_passed / 60.0), int(time_passed) % 60, deaths],367,23,Color("c5cbd9"))
 		_center_text("Pressione R para jogar novamente",448,23,Color("fff0db"))
 		_center_text("ESC para o menu",485,16,Color("979aab"))
@@ -1605,7 +1649,7 @@ func _draw_reading() -> void:
 
 # --------------------------- JUMPSCARE -------------------------------------
 func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) -> void:
-	## Rosto da Ygona, a Afrodite do mal: rosto de deusa em marmore rachado,
+	## Rosto de Afrodite pela metade (ritual incompleto): rosto de deusa em marmore rachado,
 	## metade ainda bela (labio pintado, cilios, sobrancelha arqueada) e metade
 	## descarnada ate o osso, com a boca rasgada ate a orelha. A concha partida
 	## atras da cabeca faz de aureola. "gape" (0..1) despenca o maxilar.
@@ -1629,10 +1673,17 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 	for k in range(0,25,2):
 		draw_line(Vector2(0,-30),fan[k+1],Color("1e161b"),5.0)
 	# Cabelo encharcado: massa escura e mechas pesadas escorrendo.
-	draw_circle(Vector2(0,-14),132.0,hair)
-	for i in range(17):
-		var sx: float = -160.0 + float(i)*20.0
-		draw_line(Vector2(sx*0.55,-120),Vector2(sx*1.15+sin(real_time*7.0+float(i))*6.0,200+fposmod(float(i)*37.0,60.0)),Color("120c16"),10.0)
+	# Massa arredondada no alto que se abre em cortina ate os ombros.
+	draw_colored_polygon(iso_renderer._curve([Vector2(-118,-112),Vector2(-66,-156),Vector2(0,-168),Vector2(66,-156),Vector2(118,-112),Vector2(140,-20),Vector2(150,90),Vector2(0,120),Vector2(-150,90),Vector2(-140,-20)],6),hair)
+	# Mechas pesadas e onduladas, de comprimentos diferentes, afinando na ponta.
+	for i in range(19):
+		var u: float = float(i)/18.0
+		var sx: float = lerpf(-150.0,150.0,u)
+		var hlen: float = 230.0+fposmod(float(i)*37.0,90.0)
+		var wv: float = sin(real_time*1.8+float(i)*0.7)*7.0
+		var flare: float = (u-0.5)*70.0
+		var shade: Color = hair if i%3 != 1 else Color("150e19")
+		iso_renderer.strand(self,[Vector2(sx*0.6,-130),Vector2(sx*0.95,-40),Vector2(sx+flare*0.5+sin(float(i)*2.3)*10.0+wv*0.4,60),Vector2(sx+flare+wv,-40+hlen*0.75),Vector2(sx+flare*1.2+wv*1.4,-40+hlen)],15.0,1.5,shade)
 	# Boca aberta: do canto esquerdo ate rasgar a bochecha direita.
 	var mouth: PackedVector2Array = PackedVector2Array([Vector2(-40,54),Vector2(0,48),Vector2(40,42),Vector2(72,26),Vector2(98,0),Vector2(84,42+jaw*0.4),Vector2(56,60+jaw*0.8),Vector2(20,70+jaw),Vector2(-14,70+jaw),Vector2(-40,58+jaw*0.3)])
 	draw_colored_polygon(mouth,Color("060204"))
@@ -1663,7 +1714,7 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 		draw_colored_polygon(PackedVector2Array([Vector2(tx-5,top_y),Vector2(tx+5,top_y),Vector2(tx+(0.0 if tx < 6.0 else 1.5),top_y+length)]),Color("e9dfd2"))
 	# Labios carnudos e pintados, so do lado que ainda e bonito.
 	draw_colored_polygon(PackedVector2Array([Vector2(-44,55),Vector2(-28,46),Vector2(-14,44),Vector2(-6,47),Vector2(2,44),Vector2(10,48),Vector2(-6,52),Vector2(-30,55)]),Color("5e0c1d"))
-	draw_colored_polygon(PackedVector2Array([Vector2(-44,57)+J,Vector2(-26,58)+J,Vector2(4,72)+J,Vector2(-12,80)+J,Vector2(-34,72)+J*0.6]),Color("6b0f22"))
+	draw_colored_polygon(PackedVector2Array([Vector2(-44,57)+J,Vector2(-26,58)+J,Vector2(4,72)+J,Vector2(-12,80)+J,Vector2(-34,72)+J]),Color("6b0f22"))
 	draw_line(Vector2(-30,66)+J*0.7,Vector2(-16,70)+J*0.9,Color(0.85,0.45,0.52,0.55),3.0)
 	# Nariz fino de estatua.
 	draw_line(Vector2(-4,-30),Vector2(-8,14),marble_dk,3.0)
@@ -1701,42 +1752,88 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 		draw_line(e+Vector2(-4,14),e+Vector2(-7,26+run),Color("050307"),8.0)
 		draw_line(e+Vector2(12,14),e+Vector2(14,20+run*0.55),Color("050307"),4.0)
 	# Mechas molhadas caindo por cima, uma delas cruzando a metade podre.
-	for hx in [-104.0,-92.0,-80.0,70.0,86.0,100.0]:
-		draw_polyline(PackedVector2Array([Vector2(hx*0.7,-138),Vector2(hx,-60),Vector2(hx*1.05+sin(real_time*1.6+hx)*5.0,40),Vector2(hx*1.1,170)]),hair,12.0)
-	draw_polyline(PackedVector2Array([Vector2(10,-136),Vector2(30,-90),Vector2(26,-40),Vector2(40,10)]),hair,7.0)
+	# Saem da risca, contornam a testa e escorrem ondulando pelos lados do rosto.
+	var sheen: Color = Color(0.24,0.21,0.29,0.55)
+	for hx in [-104.0,-94.0,-84.0,74.0,88.0,100.0]:
+		var sd: float = signf(hx)
+		var wv: float = sin(real_time*1.6+hx)*6.0
+		var tip: float = 150.0+fposmod(absf(hx)*3.7,50.0)
+		iso_renderer.strand(self,[Vector2(sd*8.0,-150),Vector2(hx*0.75,-118),Vector2(hx+sd*6.0,-50),Vector2(hx-sd*4.0+wv*0.5,30),Vector2(hx+sd*10.0+wv,tip)],12.0,1.2,hair)
+	for hx in [-90.0, 82.0]:
+		var sd2: float = signf(hx)
+		iso_renderer.strand(self,[Vector2(sd2*10.0,-150),Vector2(hx*0.75,-120),Vector2(hx+sd2*5.0,-56),Vector2(hx-sd2*3.0,10)],2.5,0.5,sheen)
+	# Uma mecha cruza a metade podre do rosto.
+	var wv2: float = sin(real_time*1.3)*5.0
+	iso_renderer.strand(self,[Vector2(6,-150),Vector2(26,-112),Vector2(32,-60),Vector2(26+wv2*0.5,-10),Vector2(38+wv2,40)],8.0,1.0,hair)
 	draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _claw(wrist: Vector2, side: float, spread: float) -> void:
-	# Mao de estatua, de dedos finos demais e unhas pretas compridas,
-	# entrando pela lateral da tela.
+	# Mao de estatua, de dedos longos e finos que se curvam como garras,
+	# com unhas pretas pontudas, entrando pela lateral da tela.
+	# Tudo em curvas afinadas (sem linhas retas nem pontas quadradas).
 	var marble: Color = Color("a69b9b")
-	draw_line(wrist+Vector2(side*260.0,60),wrist,marble.darkened(0.3),40.0)
-	draw_line(wrist+Vector2(side*170.0,40),wrist+Vector2(side*90.0,14),Color(0.80,0.08,0.20,0.8),2.0)
-	draw_circle(wrist,30.0,marble.darkened(0.2))
+	var shade: Color = marble.darkened(0.2)
+	var fwd: Vector2 = Vector2(-side,0.0)           # aponta para o centro da tela
+	var curl: float = 0.8+0.4*spread                # os dedos tremem, abrindo e fechando
+	# Antebraco que afina ate o pulso, com uma rachadura acesa.
+	iso_renderer.strand(self,[wrist+Vector2(side*320.0,90.0),wrist+Vector2(side*160.0,42.0),wrist+Vector2(side*50.0,8.0),wrist+fwd*6.0],27.0,17.0,marble.darkened(0.3))
+	draw_polyline(PackedVector2Array([wrist+Vector2(side*200.0,56.0),wrist+Vector2(side*150.0,33.0),wrist+Vector2(side*118.0,37.0),wrist+Vector2(side*76.0,16.0)]),Color(0.80,0.08,0.20,0.8),2.0,true)
+	# Palma oval, inclinada na direcao da mao.
+	var palm: PackedVector2Array = PackedVector2Array()
+	for k in range(24):
+		var a: float = TAU*float(k)/24.0
+		palm.append(wrist+fwd*24.0+Vector2(cos(a)*36.0,sin(a)*25.0))
+	draw_colored_polygon(palm,shade)
+	# Quatro dedos em leque e o polegar mais baixo; cada um com tres falanges
+	# que curvam para baixo, e uma unha preta comprida no fim.
+	var lengths: Array = [0.86,1.0,0.95,0.78,0.62]
 	for i in range(5):
-		var ang: float = (PI if side > 0.0 else 0.0) + (float(i)-2.0)*0.30*spread*side
-		var dir: Vector2 = Vector2.from_angle(ang)
-		var knuckle: Vector2 = wrist+dir*72.0
-		var tip: Vector2 = knuckle+dir.rotated(-0.45*side)*70.0
-		draw_line(wrist+dir*16.0,knuckle,marble,11.0)
-		draw_line(knuckle,tip,marble,8.0)
-		draw_circle(knuckle,6.5,marble.darkened(0.15))
-		draw_colored_polygon(PackedVector2Array([tip+dir.orthogonal()*5.0,tip-dir.orthogonal()*5.0,tip+dir.rotated(-0.6*side)*44.0]),Color("0a0508"))
-		draw_circle(tip+dir.rotated(-0.6*side)*40.0,2.5,Color("5c0f1d"))
+		var thumb: bool = i == 4
+		var offs: float = -side*1.05*spread if thumb else (float(i)-1.5)*0.34*spread*side
+		var dir: Vector2 = fwd.rotated(offs)
+		var k: float = float(lengths[i])
+		var base: Vector2 = wrist+fwd*(8.0 if thumb else 26.0)+dir*30.0
+		var knuckle: Vector2 = base+dir*64.0*k
+		var d2: Vector2 = dir.rotated(-side*0.32*curl)
+		var mid: Vector2 = knuckle+d2*44.0*k
+		var d3: Vector2 = d2.rotated(-side*0.34*curl)
+		var tip: Vector2 = mid+d3*28.0*k
+		iso_renderer.strand(self,[base,knuckle,mid,tip],8.5 if thumb else 7.5,4.2,marble,6)
+		draw_circle(knuckle,5.6,marble.lightened(0.05))
+		draw_circle(mid,4.6,marble.lightened(0.05))
+		var nail: Vector2 = d3.rotated(-side*0.35)
+		iso_renderer.strand(self,[tip-d3*5.0,tip+d3*12.0,tip+d3*22.0+nail*14.0,tip+d3*24.0+nail*34.0],4.6,0.3,Color("0a0508"),6)
+		draw_circle(tip+d3*24.0+nail*32.0,2.2,Color("5c0f1d"))
 
 func _draw_jumpscare() -> void:
-	var k: float = clampf(death_time/CFG.JUMPSCARE_SECONDS,0.0,1.0)
-	var flash: bool = fposmod(death_time*17.0,1.0) < 0.5
-	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.30,0.02,0.05) if (flash and k < 0.7) else Color(0.01,0.0,0.01))
-	var jitter: Vector2 = Vector2(randf_range(-1,1),randf_range(-1,1))*22.0*(1.0-k)
-	# A cara avanca de uma vez, o maxilar despenca e ela continua crescendo
-	# ate engolir a tela, enquanto as maos fecham pelos lados.
-	var zoom: float = 1.15 + 2.3*pow(k,0.45)
-	_entity_face(Vector2(WIDTH*0.5,HEIGHT*0.5-30.0-70.0*k)+jitter,zoom,Color("f0457c"),clampf(k*3.5,0.0,1.0))
-	var close: float = smoothstep(0.0,0.45,k)
+	## O rosto bate na tela quase de imediato (0,12 s), ja enorme, tremendo
+	## e aos saltos; o maxilar despenca em seguida e as maos fecham rapido.
+	## O chiado, os rasgos e a distorcao vem do shader "jumpscare" por cima.
+	var t: float = death_time
+	var k: float = clampf(t/CFG.JUMPSCARE_SECONDS,0.0,1.0)
+	var full: Rect2 = Rect2(0,0,WIDTH,HEIGHT)
+	draw_rect(full,Color(0.006,0.0,0.004))
+	# Dois quadros de escuro so com chiado: o susto vem do nada.
+	if t < 0.035:
+		return
+	var hit: float = clampf((t-0.035)/0.12,0.0,1.0)
+	var slam: float = 1.0-pow(1.0-hit,3.0)
+	# Flashes curtos de vermelho-escuro enquanto ela bate na tela.
+	if t < 0.22 and fposmod(t*22.0,1.0) < 0.5:
+		draw_rect(full,Color(0.20,0.0,0.03))
+	var zoom: float = lerpf(1.7,2.8,slam) + 0.6*smoothstep(0.15,CFG.JUMPSCARE_SECONDS,t)
+	# Tremor que nao para e saltos bruscos de posicao, como quadros pulados.
+	var jitter: Vector2 = Vector2(randf_range(-1,1),randf_range(-1,1))*lerpf(34.0,16.0,k)
+	if randf() < 0.2:
+		jitter += Vector2(randf_range(-70,70),randf_range(-35,35))
+	var at: Vector2 = Vector2(WIDTH*0.5,HEIGHT*0.5-20.0-60.0*k)+jitter
+	_entity_face(at,zoom,Color("ff3d73"),clampf((t-0.05)/0.25,0.0,1.0))
+	# Mais escuro: so os olhos e os dentes furam a sombra.
+	draw_rect(full,Color(0.0,0.0,0.0,0.18))
+	var close: float = smoothstep(0.0,0.28,t)
 	for side in [-1.0, 1.0]:
-		_claw(Vector2(WIDTH*0.5+side*lerpf(760.0,330.0,close),HEIGHT*0.72)+jitter*0.5,side,1.0+0.5*sin(death_time*30.0))
-	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0,0,0,smoothstep(0.82,1.0,k)))
+		_claw(Vector2(WIDTH*0.5+side*lerpf(760.0,320.0,close),HEIGHT*0.72)+jitter*0.6,side,1.0+0.5*sin(t*34.0))
+	draw_rect(full,Color(0,0,0,smoothstep(0.84,1.0,k)))
 
 # --------------------------- ABERTURA --------------------------------------
 func _draw_intro() -> void:
@@ -1847,7 +1944,7 @@ func _intro_fragments(t: float) -> void:
 		var victim: String = str(VICTIMS[i]["name"])
 		var w: float = ThemeDB.fallback_font.get_string_size(victim,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x
 		_world_txt(Vector2(c.x-w*0.5,292.0),victim,14,Color(0.84,0.74,0.76,a))
-	_center_text("Três mulheres deitadas no altar. Ela guardou os silicones.",672,24,Color("d9cfc4"))
+	_center_text("Três oferendas para Afrodite. Ela guardou os silicones.",672,24,Color("d9cfc4"))
 
 func _intro_locked(t: float) -> void:
 	# 4) A porta bate. Corte para o jogo.

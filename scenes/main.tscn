@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/music_director.gd" id="2_audio"]
 
-[node name="YgonaScare" type="Node2D"]
+[node name="AfroditeScare" type="Node2D"]
 script = ExtResource("1_game")
 
 [node name="Audio" type="Node" parent="."]

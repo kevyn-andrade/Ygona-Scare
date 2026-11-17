@@ -118,10 +118,10 @@ func _run() -> void:
     game.monster_dormant = 0.0
     game.house_light = 1.0
     game.monster_lit = true
-    await _closeup("15_ygona_congelada", game.monster, 5)
+    await _closeup("15_afrodite_congelada", game.monster, 5)
     game.monster_lit = false
     game.monster_state = "PERSEGUINDO"
-    await _closeup("16_ygona_perseguindo", game.monster, 5)
+    await _closeup("16_afrodite_perseguindo", game.monster, 5)
     # Assombracoes: salao com as penduradas, oficina com manequins, esconderijo.
     game.monster = game.tile(45, 5)
     game.previous_monster = game.monster

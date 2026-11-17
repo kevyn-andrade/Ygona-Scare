@@ -30,7 +30,7 @@ game=(ROOT/'scripts/game.gd').read_text(encoding='utf-8')
 assert 'opacity = 0.26' not in render
 assert 'wall_bands' in render and 'floor_texture' in render
 assert 'cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)' in render
-assert 'if pose > 0.28:' in render
+assert 'if pose > 0.28' in render
 assert 'var flashlight_pose: float = 0.0' in game
 assert 'CFG.RECHARGE_CAP' in game
 assert 'Engine.get_physics_interpolation_fraction()' in game

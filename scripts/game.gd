@@ -493,7 +493,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif key == KEY_Q:
 		_throw_bottle()
 	elif key == KEY_H:
-		notify("WASD mover | MOUSE mirar | F espectral | ESPAÇO tirar/guardar lanterna | SHIFT correr | E interagir | Q distrair", 6.5)
+		notify("SETAS ↑ ↓ ← → mover | MOUSE mirar | F espectral | ESPAÇO tirar/guardar lanterna | SHIFT correr | E interagir | Q distrair", 6.5)
 
 func _physics_process(delta: float) -> void:
 	if status != "playing":
@@ -1404,7 +1404,7 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(WIDTH-216,60,180*d,7),Color("d96a80"))
 		_world_txt(Vector2(WIDTH-215,90),"A YGONA ESTÁ PRÓXIMA",11,Color("dba4ae"))
 	_world_txt(Vector2(26,HEIGHT-49),_objective(),16,Color("e9e0ce"))
-	var helper = "WASD MOVER  |  MOUSE MIRAR  |  SHIFT CORRER  |  ESPAÇO TIRAR/GUARDAR LANTERNA  |  E INTERAGIR"
+	var helper = "SETAS ↑ ↓ ← → MOVER  |  MOUSE MIRAR  |  SHIFT CORRER  |  ESPAÇO TIRAR/GUARDAR LANTERNA  |  E INTERAGIR"
 	if ghost_unlocked:
 		helper += "  |  F ESPECTRAL"
 	_world_txt(Vector2(26,HEIGHT-20),helper,11,Color("a6a8b8"))
@@ -1463,7 +1463,7 @@ func _draw_overlay() -> void:
 		_center_text("Fora da luz, tudo é escuro — e é no escuro que ela anda. Quando ouvir a risada, acenda a luz.",378,16,Color("aeb9d5"))
 		draw_rect(Rect2(WIDTH/2-199,437,398,58),Color("5d4056"))
 		_center_text("PRESSIONE ENTER PARA JOGAR",477,23,Color("fff2e5"))
-		_center_text("WASD MOVER  •  MOUSE MIRAR  •  ESPAÇO TIRAR/GUARDAR  •  F ESPECTRAL",553,16,Color("b1a9b9"))
+		_center_text("SETAS ↑ ↓ ← → MOVER  •  MOUSE MIRAR  •  ESPAÇO TIRAR/GUARDAR  •  F ESPECTRAL",553,16,Color("b1a9b9"))
 		_center_text("E INTERAGIR  •  SHIFT CORRER  •  Q DISTRAIR  •  H AJUDA  •  F3 FPS",586,14,Color("8e93a5"))
 		_center_text("VISTA ISOMÉTRICA 45°  •  GODOT 4.7  •  ÁUDIO ORIGINAL",676,13,Color("7e8292"))
 	elif status == "paused":
@@ -1605,89 +1605,124 @@ func _draw_reading() -> void:
 
 # --------------------------- JUMPSCARE -------------------------------------
 func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) -> void:
-	## Rosto da Ygona: caveira comprida, orbitas ocas chorando preto e um sorriso
-	## cortado ate as orelhas. "gape" (0..1) desloca o maxilar.
-	## Aparicao ficticia e abstrata: nao reproduz o rosto de nenhuma pessoa real.
+	## Rosto da Ygona, a Afrodite do mal: rosto de deusa em marmore rachado,
+	## metade ainda bela (labio pintado, cilios, sobrancelha arqueada) e metade
+	## descarnada ate o osso, com a boca rasgada ate a orelha. A concha partida
+	## atras da cabeca faz de aureola. "gape" (0..1) despenca o maxilar.
+	## Criatura ficticia: nao reproduz o rosto de nenhuma pessoa real.
 	draw_set_transform(center,0.0,Vector2(zoom,zoom))
-	var jaw: float = 78.0*clampf(gape,0.0,1.0)
-	var bone: Color = Color("8f8088")
+	var jaw: float = 72.0*clampf(gape,0.0,1.0)
+	var marble: Color = Color("a69b9b")
+	var marble_dk: Color = Color("6c6064")
+	var rot: Color = Color("3b1220")
+	var vein: Color = Color(0.80,0.08,0.20,0.9)
+	var hair: Color = Color("0a070d")
+	# Aureola: concha de Venus apodrecida, com um pedaco arrancado.
+	var fan: PackedVector2Array = PackedVector2Array([Vector2(0,-30)])
+	for k in range(25):
+		var a: float = PI+0.12+(PI-0.24)*float(k)/24.0
+		var r: float = 205.0+18.0*float(k%2)
+		if k >= 15 and k <= 18:
+			r *= 0.58+0.12*float(k%2)
+		fan.append(Vector2(0,-30)+Vector2.from_angle(a)*r)
+	draw_colored_polygon(fan,Color("3e3036"))
+	for k in range(0,25,2):
+		draw_line(Vector2(0,-30),fan[k+1],Color("1e161b"),5.0)
+	# Cabelo encharcado: massa escura e mechas pesadas escorrendo.
+	draw_circle(Vector2(0,-14),132.0,hair)
 	for i in range(17):
 		var sx: float = -160.0 + float(i)*20.0
-		draw_line(Vector2(sx*0.55,-120),Vector2(sx*1.15+sin(real_time*7.0+float(i))*6.0,190+fposmod(float(i)*37.0,60.0)),Color("17101c"),9.0)
-	draw_circle(Vector2(0,-8),128.0,Color("0c070f"))
-	# Maxilar pendurado, depois o cranio por cima.
-	draw_colored_polygon(PackedVector2Array([Vector2(-66,70),Vector2(66,70),Vector2(46,122+jaw),Vector2(0,138+jaw),Vector2(-46,122+jaw)]),Color("75666e"))
-	draw_colored_polygon(PackedVector2Array([Vector2(-92,-40),Vector2(-78,-92),Vector2(-40,-118),Vector2(0,-124),Vector2(40,-118),Vector2(78,-92),Vector2(92,-40),Vector2(84,30),Vector2(62,90),Vector2(26,112),Vector2(0,116),Vector2(-26,112),Vector2(-62,90),Vector2(-84,30)]),bone)
-	for side in [-1.0, 1.0]:
-		# Bochechas fundas.
-		draw_colored_polygon(PackedVector2Array([Vector2(84*side,-2),Vector2(54*side,12),Vector2(44*side,74),Vector2(64*side,86)]),Color("5a4953"))
-	# Rachaduras e o sinal entalhado na testa.
-	var crack: Color = Color("2a1c26")
-	draw_polyline(PackedVector2Array([Vector2(-12,-124),Vector2(-24,-96),Vector2(-10,-74),Vector2(-18,-58)]),crack,2.4)
-	draw_line(Vector2(-24,-96),Vector2(-46,-84),crack,1.8)
-	draw_polyline(PackedVector2Array([Vector2(34,-119),Vector2(42,-94),Vector2(30,-80)]),crack,2.0)
-	draw_polyline(PackedVector2Array([Vector2(-11,-104),Vector2(11,-104),Vector2(0,-84),Vector2(-11,-104)]),Color("5a0f1c"),2.6)
-	draw_line(Vector2(0,-110),Vector2(0,-80),Color("5a0f1c"),2.0)
-	for side in [-1.0, 1.0]:
-		var eye: Vector2 = Vector2(46.0*side,-30.0)
-		# Orbitas ocas e caidas, com veias em volta.
-		for v in range(7):
-			var va: float = TAU*float(v)/7.0+side*0.4
-			draw_line(eye+Vector2.from_angle(va)*30.0,eye+Vector2.from_angle(va+0.25)*(50.0+fposmod(float(v)*13.0,9.0)),Color("5a0f1c"),2.0)
-		draw_circle(eye,39.0,Color("050307"))
-		draw_circle(eye+Vector2(-2.0*side,15),30.0,Color("050307"))
-		# No fundo, uma pupila minuscula que nunca desvia.
-		var pupil: Vector2 = eye+Vector2(-4.0*side,5)
-		draw_circle(pupil,17.0,Color(eyes.r,eyes.g,eyes.b,0.16))
-		draw_circle(pupil,7.0,eyes)
-		draw_circle(pupil,2.4,Color("fff6f2"))
-		# Lagrimas pretas escorrendo.
-		var run: float = 62.0+14.0*sin(real_time*2.6+side*1.7)
-		draw_line(eye+Vector2(-6.0*side,36),eye+Vector2(-9.0*side,44+run),Color("050307"),8.0)
-		draw_line(eye+Vector2(12.0*side,38),eye+Vector2(14.0*side,40+run*0.55),Color("050307"),4.0)
-		draw_line(eye+Vector2(-42.0*side,-46),eye+Vector2(30.0*side,-34),Color("0c070f"),10.0)
-		# O sorriso foi cortado ate as orelhas e mal costurado.
-		var corner: Vector2 = Vector2(70.0*side,40)
-		var ear: Vector2 = Vector2(100.0*side,2)
-		draw_line(corner,ear,Color("3d0812"),7.0)
-		for k in range(4):
-			var st: Vector2 = corner.lerp(ear,0.18+float(k)*0.24)
-			draw_line(st+Vector2(5,7),st+Vector2(-5,-7),Color("c9bcae"),1.8)
-	draw_colored_polygon(PackedVector2Array([Vector2(-9,24),Vector2(0,0),Vector2(9,24)]),Color("140a11"))
-	# Boca: garganta vermelha la no fundo e duas fileiras de dentes em agulha.
-	var low: float = 108.0+jaw
-	draw_colored_polygon(PackedVector2Array([Vector2(-70,40),Vector2(-36,34),Vector2(0,38),Vector2(36,34),Vector2(70,40),Vector2(56,82+jaw*0.6),Vector2(24,low),Vector2(0,low+6),Vector2(-24,low),Vector2(-56,82+jaw*0.6)]),Color("060204"))
-	draw_circle(Vector2(0,74+jaw*0.5),16.0+jaw*0.16,Color(0.42,0.03,0.08,0.85))
-	draw_circle(Vector2(0,76+jaw*0.5),7.0+jaw*0.08,Color("060204"))
-	for i in range(10):
-		var ix: float = -49.5 + float(i)*11.0
-		draw_colored_polygon(PackedVector2Array([Vector2(ix-4,44),Vector2(ix+4,44),Vector2(ix,58+fposmod(float(i)*5.0,7.0))]),Color("9a8a80"))
+		draw_line(Vector2(sx*0.55,-120),Vector2(sx*1.15+sin(real_time*7.0+float(i))*6.0,200+fposmod(float(i)*37.0,60.0)),Color("120c16"),10.0)
+	# Boca aberta: do canto esquerdo ate rasgar a bochecha direita.
+	var mouth: PackedVector2Array = PackedVector2Array([Vector2(-40,54),Vector2(0,48),Vector2(40,42),Vector2(72,26),Vector2(98,0),Vector2(84,42+jaw*0.4),Vector2(56,60+jaw*0.8),Vector2(20,70+jaw),Vector2(-14,70+jaw),Vector2(-40,58+jaw*0.3)])
+	draw_colored_polygon(mouth,Color("060204"))
+	draw_circle(Vector2(18,62+jaw*0.55),12.0+jaw*0.18,Color(0.42,0.03,0.08,0.85))
+	# Maxilar que despenca, com os dentes de baixo em agulha.
+	var J: Vector2 = Vector2(0,jaw)
+	draw_colored_polygon(PackedVector2Array([Vector2(-74,56)+J,Vector2(-40,58)+J,Vector2(-14,70)+J,Vector2(20,70)+J,Vector2(56,60)+J,Vector2(80,48)+J,Vector2(66,72)+J,Vector2(36,104)+J,Vector2(0,116)+J,Vector2(-36,104)+J,Vector2(-66,72)+J]),marble)
+	draw_colored_polygon(PackedVector2Array([Vector2(8,72)+J,Vector2(56,60)+J,Vector2(80,48)+J,Vector2(66,72)+J,Vector2(36,104)+J,Vector2(10,100)+J]),rot)
+	for i in range(8):
+		var bx: float = -30.0 + float(i)*12.0
+		var base_y: float = 69.0-maxf(0.0,bx-20.0)*0.25
+		draw_colored_polygon(PackedVector2Array([Vector2(bx-4.5,base_y)+J,Vector2(bx+4.5,base_y)+J,Vector2(bx,base_y-13.0-fposmod(float(i)*29.0,9.0))+J]),Color("d8cbbd"))
+	# Rosto de deusa: oval, macas altas, queixo fino (a parte de cima).
+	draw_colored_polygon(PackedVector2Array([Vector2(-88,-50),Vector2(-80,-100),Vector2(-46,-128),Vector2(0,-136),Vector2(46,-128),Vector2(80,-100),Vector2(88,-50),Vector2(86,0),Vector2(98,0),Vector2(72,26),Vector2(40,42),Vector2(0,48),Vector2(-40,54),Vector2(-74,56),Vector2(-84,10)]),marble)
+	# Metade direita descarnada: carne viva, osso da maca e o rasgo costurado.
+	draw_colored_polygon(PackedVector2Array([Vector2(10,-2),Vector2(58,-20),Vector2(88,-30),Vector2(92,0),Vector2(72,26),Vector2(40,42),Vector2(14,40)]),rot)
+	for k in range(5):
+		draw_line(Vector2(20+float(k)*14.0,-6-float(k)*3.0),Vector2(16+float(k)*12.0,36-float(k)*4.0),Color("6a1a28"),3.0)
+	draw_polyline(PackedVector2Array([Vector2(24,-14),Vector2(58,-22),Vector2(86,-24)]),Color("cfc4b8"),6.0)
+	for k in range(4):
+		var st: Vector2 = Vector2(40,42).lerp(Vector2(98,0),0.15+float(k)*0.24)
+		draw_line(st+Vector2(6,7),st+Vector2(-6,-7),Color("c9bcae"),2.0)
+	# Dentes de cima: perfeitos do lado bonito, agulhas do lado podre.
 	for i in range(11):
-		var tx: float = -60.0 + float(i)*12.0
-		var top_y: float = 35.0+absf(tx)*0.07
-		var length: float = 17.0+fposmod(float(i)*37.0,13.0)
-		draw_colored_polygon(PackedVector2Array([Vector2(tx-5.5,top_y),Vector2(tx+5.5,top_y),Vector2(tx+fposmod(float(i)*3.0,4.0)-2.0,top_y+length)]),Color("e9dfd2"))
-	for i in range(9):
-		var bx: float = -48.0 + float(i)*12.0
-		var base_y: float = low+4.0-pow(absf(bx)/56.0,1.5)*(30.0+jaw*0.4)
-		var blen: float = 14.0+fposmod(float(i)*29.0,11.0)
-		draw_colored_polygon(PackedVector2Array([Vector2(bx-5,base_y),Vector2(bx+5,base_y),Vector2(bx,base_y-blen)]),Color("d8cbbd"))
+		var tx: float = -32.0 + float(i)*11.0
+		var top_y: float = 50.0-maxf(0.0,tx)*0.12-maxf(0.0,tx-40.0)*0.35
+		var length: float = 10.0 if tx < 6.0 else 16.0+fposmod(float(i)*37.0,12.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(tx-5,top_y),Vector2(tx+5,top_y),Vector2(tx+(0.0 if tx < 6.0 else 1.5),top_y+length)]),Color("e9dfd2"))
+	# Labios carnudos e pintados, so do lado que ainda e bonito.
+	draw_colored_polygon(PackedVector2Array([Vector2(-44,55),Vector2(-28,46),Vector2(-14,44),Vector2(-6,47),Vector2(2,44),Vector2(10,48),Vector2(-6,52),Vector2(-30,55)]),Color("5e0c1d"))
+	draw_colored_polygon(PackedVector2Array([Vector2(-44,57)+J,Vector2(-26,58)+J,Vector2(4,72)+J,Vector2(-12,80)+J,Vector2(-34,72)+J*0.6]),Color("6b0f22"))
+	draw_line(Vector2(-30,66)+J*0.7,Vector2(-16,70)+J*0.9,Color(0.85,0.45,0.52,0.55),3.0)
+	# Nariz fino de estatua.
+	draw_line(Vector2(-4,-30),Vector2(-8,14),marble_dk,3.0)
+	draw_colored_polygon(PackedVector2Array([Vector2(-16,18),Vector2(-6,22),Vector2(2,18),Vector2(-6,14)]),Color("4d4044"))
+	# Rachaduras do marmore, acesas por dentro.
+	draw_polyline(PackedVector2Array([Vector2(-14,-136),Vector2(-24,-104),Vector2(-8,-80),Vector2(-20,-60)]),Color("2a1c26"),5.0)
+	draw_polyline(PackedVector2Array([Vector2(-14,-136),Vector2(-24,-104),Vector2(-8,-80),Vector2(-20,-60)]),vein,1.8)
+	draw_polyline(PackedVector2Array([Vector2(-84,-20),Vector2(-62,-6),Vector2(-70,20),Vector2(-56,40)]),Color("2a1c26"),4.0)
+	draw_polyline(PackedVector2Array([Vector2(-84,-20),Vector2(-62,-6),Vector2(-70,20),Vector2(-56,40)]),vein,1.4)
+	# Olho esquerdo: amendoado, cilios longos, sobrancelha arqueada... e esclera preta.
+	var le: Vector2 = Vector2(-44,-34)
+	draw_colored_polygon(PackedVector2Array([le+Vector2(-34,4),le+Vector2(-18,-12),le+Vector2(4,-16),le+Vector2(26,-8),le+Vector2(34,2),le+Vector2(14,12),le+Vector2(-12,12)]),Color("050307"))
+	draw_circle(le+Vector2(2,-1),15.0,Color(eyes.r,eyes.g,eyes.b,0.22))
+	draw_circle(le+Vector2(2,-1),9.0,eyes)
+	draw_line(le+Vector2(2,-8),le+Vector2(2,6),Color("050307"),3.0)
+	draw_circle(le+Vector2(-1,-4),2.2,Color("fff6f2"))
+	for k in range(7):
+		var lb: Vector2 = le+Vector2(-30+float(k)*10.0,-10-sin(float(k)/6.0*PI)*6.0)
+		draw_line(lb,lb+Vector2(-6.0+float(k)*0.6,-16.0-sin(float(k)/6.0*PI)*5.0),Color("050307"),2.6)
+	draw_polyline(PackedVector2Array([le+Vector2(-40,-26),le+Vector2(-16,-44),le+Vector2(14,-46),le+Vector2(36,-34)]),Color("120c14"),7.0)
+	draw_colored_polygon(PackedVector2Array([le+Vector2(-34,2),le+Vector2(-20,-22),le+Vector2(10,-28),le+Vector2(34,0),le+Vector2(26,-8),le+Vector2(4,-16),le+Vector2(-18,-12)]),Color(0.20,0.05,0.14,0.55))
+	# Olho direito: orbita vazia com veias, so uma brasa la no fundo.
+	var re: Vector2 = Vector2(46,-36)
+	for v in range(7):
+		var va: float = TAU*float(v)/7.0+0.4
+		draw_line(re+Vector2.from_angle(va)*28.0,re+Vector2.from_angle(va+0.25)*(48.0+fposmod(float(v)*13.0,9.0)),Color("5a0f1c"),2.0)
+	draw_circle(re,36.0,Color("050307"))
+	draw_circle(re+Vector2(-2,14),28.0,Color("050307"))
+	draw_circle(re+Vector2(-4,6),16.0,Color(eyes.r,eyes.g,eyes.b,0.16))
+	draw_circle(re+Vector2(-4,6),6.0,eyes)
+	draw_circle(re+Vector2(-4,6),2.2,Color("fff6f2"))
+	# Lagrimas pretas escorrendo dos dois lados.
+	for e in [le, re]:
+		var run: float = 62.0+14.0*sin(real_time*2.6+e.x*0.04)
+		draw_line(e+Vector2(-4,14),e+Vector2(-7,26+run),Color("050307"),8.0)
+		draw_line(e+Vector2(12,14),e+Vector2(14,20+run*0.55),Color("050307"),4.0)
+	# Mechas molhadas caindo por cima, uma delas cruzando a metade podre.
+	for hx in [-104.0,-92.0,-80.0,70.0,86.0,100.0]:
+		draw_polyline(PackedVector2Array([Vector2(hx*0.7,-138),Vector2(hx,-60),Vector2(hx*1.05+sin(real_time*1.6+hx)*5.0,40),Vector2(hx*1.1,170)]),hair,12.0)
+	draw_polyline(PackedVector2Array([Vector2(10,-136),Vector2(30,-90),Vector2(26,-40),Vector2(40,10)]),hair,7.0)
 	draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _claw(wrist: Vector2, side: float, spread: float) -> void:
-	# Mao de dedos compridos entrando pela lateral da tela.
-	var bone: Color = Color("8f8088")
-	draw_line(wrist+Vector2(side*260.0,60),wrist,bone.darkened(0.3),46.0)
-	draw_circle(wrist,34.0,bone.darkened(0.2))
+	# Mao de estatua, de dedos finos demais e unhas pretas compridas,
+	# entrando pela lateral da tela.
+	var marble: Color = Color("a69b9b")
+	draw_line(wrist+Vector2(side*260.0,60),wrist,marble.darkened(0.3),40.0)
+	draw_line(wrist+Vector2(side*170.0,40),wrist+Vector2(side*90.0,14),Color(0.80,0.08,0.20,0.8),2.0)
+	draw_circle(wrist,30.0,marble.darkened(0.2))
 	for i in range(5):
 		var ang: float = (PI if side > 0.0 else 0.0) + (float(i)-2.0)*0.30*spread*side
 		var dir: Vector2 = Vector2.from_angle(ang)
-		var knuckle: Vector2 = wrist+dir*70.0
-		var tip: Vector2 = knuckle+dir.rotated(-0.5*side)*74.0
-		draw_line(wrist+dir*18.0,knuckle,bone,15.0)
-		draw_line(knuckle,tip,bone,11.0)
-		draw_circle(knuckle,8.5,bone.darkened(0.15))
-		draw_line(tip,tip+dir.rotated(-0.5*side)*26.0,Color("1c0a10"),7.0)
+		var knuckle: Vector2 = wrist+dir*72.0
+		var tip: Vector2 = knuckle+dir.rotated(-0.45*side)*70.0
+		draw_line(wrist+dir*16.0,knuckle,marble,11.0)
+		draw_line(knuckle,tip,marble,8.0)
+		draw_circle(knuckle,6.5,marble.darkened(0.15))
+		draw_colored_polygon(PackedVector2Array([tip+dir.orthogonal()*5.0,tip-dir.orthogonal()*5.0,tip+dir.rotated(-0.6*side)*44.0]),Color("0a0508"))
+		draw_circle(tip+dir.rotated(-0.6*side)*40.0,2.5,Color("5c0f1d"))
 
 func _draw_jumpscare() -> void:
 	var k: float = clampf(death_time/CFG.JUMPSCARE_SECONDS,0.0,1.0)

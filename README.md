@@ -14,7 +14,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 
 | Ação | Tecla |
 |---|---|
-| Movimentar na tela isométrica | W A S D / setas |
+| Movimentar na tela isométrica | Setas ↑ ↓ ← → |
 | Apontar lanterna | Mouse |
 | Tirar lanterna do decote / guardar no decote | **Espaço** |
 | Alternar luz normal / sobrenatural (lanterna ligada) | F |
@@ -30,7 +30,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 - **Nome:** de `Entre as Paredes` para **Ygona Scare** em `project.godot`, árvore de cena, menu e HUD.
 - **Câmera:** sistema 2.5D isométrico a 45°, com paredes de altura aparente e fachadas agora sempre opacas.
 - **Protagonista:** personagem feminina procedural com cabelos longos e roupa roxa. Agora a lanterna desaparece completamente ao ser guardada, emerge do centro do decote por etapas e é erguida com a mão antes de acender. O gesto é estilizado, sem nudez.
-- **Controles:** WASD acompanha os eixos visuais da perspectiva, e a mira do mouse é convertida das coordenadas da tela para as do mundo.
+- **Controles:** as setas do teclado (↑ ↓ ← →) acompanham os eixos visuais da perspectiva, e a mira do mouse é convertida das coordenadas da tela para as do mundo.
 - **Entidade:** a criatura agora se chama **Ygona** dentro do jogo, representada como aparição abstrata. Ela fica paralisada somente sob **luz normal**, não sob luz espectral.
 - **Áudio:** música dinâmica original de proximidade `assets/audio/ygona_theme.wav`, além de quatro camadas de ambiente que intensificam com cada fragmento.
 
@@ -140,9 +140,9 @@ tests/visual_check.gd      # captura telas de vários momentos para revisão
 
 | Tema | O que mudou |
 |---|---|
-| Protagonista | Redesenhada (adulta, vestida, sem nudez): busto mais proeminente, cintura marcada, colo à mostra no decote em V, respiração e balanço ao andar. A lanterna sobe **por trás** do busto, que se afasta enquanto ela passa, e só então é erguida e apontada. Ao guardar, o gesto se inverte. |
+| Protagonista | Redesenhada (adulta, vestida, sem nudez): busto mais proeminente, cintura marcada, colo à mostra no decote em V, respiração e marcha natural (quadril para a perna de apoio, ombros em contraposição, transição suave entre parar/andar/correr). O busto, grande e em forma de gota, tem física de mola amortecida: acompanha o passo com atraso, quica ao parar ou arrancar e balança quando a lanterna é tirada ou guardada. A lanterna sobe **por trás** do busto, que se afasta enquanto ela passa, e só então é erguida e apontada. Ao guardar, o gesto se inverte. |
 | Artefatos | Os três "fragmentos" agora são os **silicones das mulheres sacrificadas no altar da Ygona** — Dalva (biblioteca), Marlene (caixa de música) e Soraia (espelho), personagens fictícias. São próteses de gel que tremem e pulsam; ao pegar cada uma, abre-se a etiqueta com a história da vítima, e ela vai para o decote junto da lanterna. No código continuam se chamando `fragment_*`. |
-| Ygona | Corpo comprido de vestido em farrapos, costelas à mostra, braços longos com garras que se estendem na perseguição, pescoço quebrado que estala mesmo sob a luz, órbitas ocas chorando preto e sorriso cortado. Novo rosto no jumpscare (maxilar despencando, duas fileiras de dentes, mãos fechando pelos lados), no menu e na tela de morte. Continua sendo uma aparição abstrata, sem reproduzir o rosto de ninguém. |
+| Ygona | "Afrodite do mal": deusa de mármore rachado apodrecida no fundo do mar. Concha de Vênus partida como auréola, cabelo encharcado até os quadris, túnica grega em farrapos pingando água preta com algas, peito aberto e costurado, braços de estátua com unhas pretas compridas que se estendem na perseguição e pescoço quebrado que estala mesmo sob a luz. Metade do rosto ainda é bela (lábio pintado, cílios, esclera preta), a outra metade é osso, com a boca rasgada até a orelha. O mesmo rosto aparece no jumpscare (maxilar despencando, mãos de mármore fechando pelos lados), no menu e na tela de morte. Criatura fictícia, sem reproduzir o rosto de ninguém. |
 | Altar e ritual | Altar ensanguentado, com velas que seguram um resto de luz no escuro. No ritual, os silicones aparecem sobre o tampo e as três mulheres se erguem em volta para levar a Ygona. |
 | Pavor | Batimento cardíaco e vinheta vermelha que aceleram com a proximidade; sussurros das vítimas; rastro de sangue que a entidade deixa e que seca aos poucos (dá para rastreá-la com a lanterna); quatro frases escritas pelas vítimas, visíveis só na luz espectral. |
 | Correções | O tremor de câmera existia no código mas nunca era aplicado — agora treme na queda de luz e ao pegar um silicone. Caixas de aviso medem o texto de verdade (frases longas não vazam mais). Tela de vitória mostra quantas vezes você morreu. |

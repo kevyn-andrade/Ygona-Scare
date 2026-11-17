@@ -555,19 +555,92 @@ func _limb(a: Vector2, b: Vector2, wa: float, wb: float, color: Color) -> void:
     cv.draw_circle(a,wa,color)
     cv.draw_circle(b,wb,color)
 
+# Estado da animacao da protagonista: marcha suavizada e fisica do busto.
+# Guardado entre quadros para o movimento ter inercia (nada muda aos trancos).
+var _anim_clock: float = -1.0
+var _gait_phase: float = 0.0
+var _gait_amt: float = 0.0
+var _run_amt: float = 0.0
+var _prev_anchor: Vector2 = Vector2.ZERO
+var _prev_anchor_vel: Vector2 = Vector2.ZERO
+var _bust_off: Array = [Vector2.ZERO, Vector2.ZERO]
+var _bust_vel: Array = [Vector2.ZERO, Vector2.ZERO]
+
+func _anim_step() -> float:
+    ## Tempo real desde o ultimo desenho; congela fora do jogo (pausa, leitura).
+    var now: float = g.real_time
+    var dt: float = 0.0 if _anim_clock < 0.0 else clampf(now-_anim_clock,0.0,0.05)
+    _anim_clock = now
+    return dt if g.status == "playing" else 0.0
+
+func _simulate_bust(dt: float, anchor: Vector2, part: float, lift: float) -> void:
+    ## Cada seio e uma massa presa ao peito por uma mola amortecida: atrasa no
+    ## passo, quica ao parar/arrancar e balanca depois que a lanterna passa.
+    if dt <= 0.0:
+        return
+    var vel: Vector2 = (anchor-_prev_anchor)/dt
+    if vel.length() > 900.0:   # teleporte (inicio, respawn): sem solavanco
+        vel = Vector2.ZERO
+        _prev_anchor_vel = Vector2.ZERO
+    var acc: Vector2 = ((vel-_prev_anchor_vel)/dt).limit_length(700.0)
+    _prev_anchor = anchor
+    _prev_anchor_vel = vel
+    var n: int = clampi(int(ceil(dt/0.004)),1,12)
+    var h: float = dt/float(n)
+    for i in range(2):
+        var side: float = -1.0 if i == 0 else 1.0
+        var w: float = 14.5 + 0.8*float(i)          # lados levemente diferentes
+        var damp: float = 2.0*0.22*w
+        var target: Vector2 = Vector2(side*part, lift)
+        var o: Vector2 = _bust_off[i]
+        var v: Vector2 = _bust_vel[i]
+        for _s in range(n):
+            var a: Vector2 = -(o-target)*w*w - v*damp - acc*Vector2(0.6,1.1)
+            v += a*h
+            o += v*h
+        o = Vector2(clampf(o.x,-2.8,2.8), clampf(o.y,-3.2,3.6))
+        _bust_off[i] = o
+        _bust_vel[i] = v.limit_length(90.0)
+
+func _breast(center: Vector2, rx: float, ry: float, side: float, color: Color) -> void:
+    ## Gota arredondada: encosta suave em cima, mais cheia embaixo e um pouco
+    ## voltada para fora, em vez de um circulo perfeito.
+    var pts: PackedVector2Array = PackedVector2Array()
+    for k in range(24):
+        var a: float = TAU*float(k)/24.0
+        var c: float = cos(a)
+        var s: float = sin(a)
+        var fy: float = ry*(1.0 + 0.12*maxf(0.0,s) - 0.16*maxf(0.0,-s))
+        var fx: float = rx*(1.0 + 0.05*maxf(0.0,s))
+        var p: Vector2 = Vector2(c*fx, s*fy)
+        p.x += side*0.9*maxf(0.0,s)*absf(c)
+        pts.append(center+p)
+    cv.draw_colored_polygon(pts,color)
+
 func _character() -> void:
     var center: Vector2 = screen(g.draw_player)
     if g.in_hiding:
         cv.draw_circle(center + Vector2(0,-9),7,Color("b9a9df"))
         return
+    var dt: float = _anim_step()
     # A protagonista (adulta) e desenhada em escala maior, para o gesto ficar legivel.
     # Formas curvas (splines, ovais e membros afunilados) em vez de blocos retos.
     cv.draw_set_transform(center, 0.0, Vector2(1.35,1.35))
-    var rate: float = 14.0 if g.running else 8.0
-    var walk: float = 1.0 if g.moving else 0.0
-    var phase: float = g.time_passed*rate
+    # Marcha: a amplitude e a cadencia mudam aos poucos, sem trancos ao parar,
+    # arrancar ou passar de andar para correr.
+    _gait_amt = move_toward(_gait_amt, 1.0 if g.moving else 0.0, dt*5.0)
+    _run_amt = move_toward(_run_amt, 1.0 if g.running else 0.0, dt*4.0)
+    var walk: float = smoothstep(0.0,1.0,_gait_amt)
+    var run: float = _run_amt*walk
+    if walk > 0.001:
+        _gait_phase = fposmod(_gait_phase + dt*lerpf(8.0,13.5,_run_amt), TAU)
+    var phase: float = _gait_phase
     var step: float = sin(phase)*walk
-    var bob: float = -absf(cos(phase))*1.4*walk + sin(g.real_time*2.1)*0.45   # passo + respiracao
+    var breath: float = sin(g.real_time*2.1)
+    # Sobe no meio do apoio e desce quando as pernas se abrem; ao correr, mais.
+    var bob: float = -absf(cos(phase))*lerpf(1.2,2.1,run)*walk + breath*0.4
+    var hipx: float = -step*lerpf(1.2,0.8,run)     # quadril vai para a perna de apoio
+    var shx: float = step*0.45                     # ombros em contraposicao
     var aim: Vector2 = Vector2((g.look.x-g.look.y)*SKEW_X,(g.look.x+g.look.y)*SKEW_Y).normalized()
     if aim.length_squared()<0.01:
         aim=Vector2.RIGHT
@@ -583,41 +656,48 @@ func _character() -> void:
     var stocking: Color = Color("1f2036")
     var boot: Color = Color("0f1220")
     # Pernas longas: tudo acima do quadril fica 7 unidades mais alto.
+    # L = quadril (balanca para o apoio), U = tronco/ombros (contrapoe).
     var B: Vector2 = Vector2(0,bob-7.0)
-    _oval(Vector2(0,1),14.0,6.0,Color(0,0,0,.42))
+    var L: Vector2 = B+Vector2(hipx,0)
+    var U: Vector2 = B+Vector2(shx,0)
+    _oval(Vector2(hipx*0.3,1),14.0,6.0,Color(0,0,0,.42))
     # Cabelo comprido e ondulado caindo pelas costas, com balanco atrasado.
-    var hs: float = sin(phase-0.8)*1.6*walk + sin(g.real_time*1.3)*0.5
-    _shape([B+Vector2(-9,-64),B+Vector2(9,-64),B+Vector2(14,-52),B+Vector2(15+hs*0.4,-39),B+Vector2(12+hs,-27),B+Vector2(4+hs,-30),B+Vector2(-4+hs,-27),B+Vector2(-13+hs,-28),B+Vector2(-15+hs*0.4,-40),B+Vector2(-14,-52)],hair)
-    # Pernas torneadas, de meia escura e botas; o pe que avanca sai do chao.
+    var hs: float = sin(phase-0.8)*lerpf(1.6,2.4,run)*walk + sin(g.real_time*1.3)*0.5
+    _shape([U+Vector2(-9,-64),U+Vector2(9,-64),U+Vector2(14,-52),U+Vector2(15+hs*0.4,-39),U+Vector2(12+hs,-27),U+Vector2(4+hs,-30),U+Vector2(-4+hs,-27),U+Vector2(-13+hs,-28),U+Vector2(-15+hs*0.4,-40),U+Vector2(-14,-52)],hair)
+    # Pernas torneadas, de meia escura e botas. A perna que avanca dobra o
+    # joelho e tira o pe do chao; a de apoio fica quase esticada.
     for side in [-1.0, 1.0]:
-        var lift: float = maxf(0.0,step*side)*3.0
-        var fwd: float = step*side*2.2
-        var hip: Vector2 = B+Vector2(side*4.4,-24)
-        var knee: Vector2 = Vector2(side*4.7+fwd*0.4,-16.0-lift*0.5)
+        var swing_leg: float = maxf(0.0,step*side)
+        var lift: float = swing_leg*lerpf(3.0,4.6,run)
+        var fwd: float = step*side*lerpf(2.2,3.0,run)
+        var hip: Vector2 = L+Vector2(side*4.4,-24)
+        var knee: Vector2 = Vector2(side*4.7+hipx*0.5+fwd*0.5,-16.0-lift*0.6)
         var ankle: Vector2 = Vector2(side*4.6+fwd*0.2,-2.6-lift)
         _limb(hip,knee,3.6,2.7,stocking)
         _limb(knee,ankle,2.7,1.9,stocking)
         _limb(ankle+Vector2(0,-3.4),ankle+Vector2(0,0.6),2.7,2.7,boot)
         _oval(ankle+Vector2(side*1.5,1.7),4.3,2.3,boot)
-    # Saia rodada que acompanha o passo.
-    var sk: float = step*1.3
-    _shape([B+Vector2(-7.5,-31),B+Vector2(7.5,-31),B+Vector2(10,-25),B+Vector2(12.5+sk,-17),B+Vector2(7+sk,-14.6),B+Vector2(0,-15.4),B+Vector2(-7+sk,-14.6),B+Vector2(-12.5+sk,-17),B+Vector2(-10,-25)],skirt)
+    # Saia rodada: segue o quadril e a barra acompanha com atraso, como tecido.
+    var sk: float = sin(phase-0.6)*lerpf(1.4,2.0,run)*walk
+    _shape([L+Vector2(-7.5,-31),L+Vector2(7.5,-31),L+Vector2(10,-25),L+Vector2(12.5+sk,-17),L+Vector2(7+sk,-14.6),L+Vector2(0,-15.4),L+Vector2(-7+sk,-14.6),L+Vector2(-12.5+sk,-17),L+Vector2(-10,-25)],skirt)
     for fx in [-4.0, 0.5, 4.5]:
-        cv.draw_line(B+Vector2(fx,-28),B+Vector2(fx*1.7+sk,-16.0),skirt.darkened(0.28),0.9,true)
-    cv.draw_line(B+Vector2(-11+sk,-17.2),B+Vector2(11+sk,-17.2),skirt.lightened(0.12),0.8,true)
-    # Tronco em ampulheta: ombros macios, cintura fina, quadril.
-    _shape([B+Vector2(-11,-46),B+Vector2(0,-47.5),B+Vector2(11,-46),B+Vector2(12,-40),B+Vector2(7.4,-32.5),B+Vector2(8,-29.5),B+Vector2(-8,-29.5),B+Vector2(-7.4,-32.5),B+Vector2(-12,-40)],blouse)
-    _limb(B+Vector2(-7.4,-30.4),B+Vector2(7.4,-30.4),1.4,1.4,Color("2a2038"))
-    _oval(B+Vector2(0,-30.4),1.7,1.5,Color("c9a15d"))
-    # Braco esquerdo solto, balancando ao contrario da perna.
-    var swing: float = -step*2.6
-    var lel: Vector2 = B+Vector2(-16.0+swing*0.3,-35.0)
-    var lhand: Vector2 = B+Vector2(-16.5+swing,-24.5)
-    _limb(B+Vector2(-12,-44),lel,3.3,2.7,sleeve)
+        cv.draw_line(L+Vector2(fx,-28),L+Vector2(fx*1.7+sk,-16.0),skirt.darkened(0.28),0.9,true)
+    cv.draw_line(L+Vector2(-11+sk,-17.2),L+Vector2(11+sk,-17.2),skirt.lightened(0.12),0.8,true)
+    # Tronco em ampulheta: ombros (U) e quadril (L) se movem em sentidos opostos.
+    var W: Vector2 = B+Vector2((hipx+shx)*0.5,0)
+    _shape([U+Vector2(-11,-46),U+Vector2(0,-47.5),U+Vector2(11,-46),U+Vector2(12,-40),W+Vector2(7.4,-32.5),L+Vector2(8,-29.5),L+Vector2(-8,-29.5),W+Vector2(-7.4,-32.5),U+Vector2(-12,-40)],blouse)
+    _limb(L+Vector2(-7.4,-30.4),L+Vector2(7.4,-30.4),1.4,1.4,Color("2a2038"))
+    _oval(L+Vector2(0,-30.4),1.7,1.5,Color("c9a15d"))
+    # Braco esquerdo solto, balancando ao contrario da perna (um pouco atrasado);
+    # correndo, o cotovelo dobra e a mao sobe.
+    var swing: float = -sin(phase-0.25)*walk*lerpf(2.6,3.6,run)
+    var lel: Vector2 = U+Vector2(-16.0+swing*0.3,-35.0+run*1.2)
+    var lhand: Vector2 = U+Vector2(-16.5+swing,-24.5-run*5.0)
+    _limb(U+Vector2(-12,-44),lel,3.3,2.7,sleeve)
     _limb(lel,lhand,2.5,2.0,skin)
     _oval(lhand+Vector2(0,1.4),2.3,2.8,skin)
     # Pescoco e colo, visiveis no decote em V profundo.
-    _limb(B+Vector2(0,-50.5),B+Vector2(0,-45.5),2.7,3.2,skin_shade)
+    _limb(U+Vector2(0,-50.5),U+Vector2(0,-45.5),2.7,3.2,skin_shade)
     # CINCO MOMENTOS DO GESTO:
     # 0%: lanterna completamente escondida no decote, mao na cintura;
     # 0-25%: a mao alcanca o meio do decote;
@@ -628,31 +708,38 @@ func _character() -> void:
     var reach: float = smoothstep(0.0,0.25,pose)
     var extract: float = smoothstep(0.25,0.60,pose)
     var extend: float = smoothstep(0.60,1.0,pose)
-    var chest: Vector2 = B + Vector2(0,-39)
+    var chest: Vector2 = U + Vector2(0,-39.0-breath*0.25)
     var cleft: Vector2 = chest + Vector2(0,-3)               # onde a lanterna mora
-    # Balanco atrasado em relacao ao passo, e os seios se afastam um pouco
-    # enquanto a lanterna passa entre eles.
-    var sway: float = sin(phase-1.1) * (1.5 if g.running else 0.9) * walk
-    var part: float = sin(clampf((pose-0.10)/0.52,0.0,1.0)*PI) * 1.7
+    # Enquanto a lanterna passa, os seios se afastam e sao erguidos um pouco;
+    # a mola (fisica) faz eles voltarem balancando quando ela sai ou entra.
+    var part: float = sin(clampf((pose-0.10)/0.52,0.0,1.0)*PI) * 1.6
+    var lift_up: float = -sin(clampf((pose-0.25)/0.35,0.0,1.0)*PI) * 1.2
+    _simulate_bust(dt, project(g.draw_player)/1.35 + Vector2(shx,bob), part, lift_up)
+    var o_avg: float = (_bust_off[0].y+_bust_off[1].y)*0.5
     _shape([chest+Vector2(-8,-7.5),chest+Vector2(0,-8.6),chest+Vector2(8,-7.5),chest+Vector2(4.5,-1),chest+Vector2(0,3),chest+Vector2(-4.5,-1)],skin,false)
     cv.draw_line(chest+Vector2(-6.5,-7.4),chest+Vector2(-1.6,-6.3),skin_shade,0.7,true)
     cv.draw_line(chest+Vector2(6.5,-7.4),chest+Vector2(1.6,-6.3),skin_shade,0.7,true)
     # Enquanto e puxada, a haste sobe verticalmente por tras do busto.
     if pose > 0.28 and pose <= 0.60:
         _flashlight(cleft+Vector2(0,1.0),cleft+Vector2(0,-2.0-16.0*extract),false)
-    # Busto proeminente e redondo: sombra por baixo, pele no alto do decote,
-    # tecido esticado, penumbra na curva de baixo e brilho em cima.
-    for side in [-1.0, 1.0]:
-        var b: Vector2 = chest + Vector2(side*(7.6+part),-0.5+sway)
-        _oval(b+Vector2(side*1.0,3.7),8.7,8.2,Color("4c2a45"))
-        _oval(b,8.4,8.0,skin)
-        _oval(b+Vector2(side*1.6,2.6),8.5,8.0,cloth)
-        _oval(b+Vector2(side*1.8,6.2),6.6,3.4,Color(0.36,0.18,0.33,0.42))
-        _oval(b+Vector2(side*3.2,-0.4),3.6,2.6,Color(0.80,0.52,0.68,0.50),side*0.5)
-        cv.draw_arc(b+Vector2(side*1.6,2.6),8.3,-PI*0.5-side*1.25-0.6,-PI*0.5-side*1.25+0.6,10,Color("d79dae"),1.1,true)
-    cv.draw_line(cleft+Vector2(0,-3.5),cleft+Vector2(0,5.0+sway*0.5),skin_shade,1.2+part*0.5,true)
+    # Busto grande e natural: forma de gota, peso embaixo, levemente para fora.
+    # Estica e achata conforme a velocidade da mola.
+    for i in range(2):
+        var side: float = -1.0 if i == 0 else 1.0
+        var o: Vector2 = _bust_off[i]
+        var st: float = clampf((_bust_vel[i] as Vector2).y*0.004,-0.08,0.08)
+        var b: Vector2 = chest + Vector2(side*7.2,0.6) + o
+        var rx: float = 7.7*(1.0-st*0.5)
+        var ry: float = 7.4*(1.0+st)
+        _breast(b+Vector2(side*0.9,3.4),rx+0.3,ry+0.2,side,Color("4c2a45"))
+        _breast(b,rx,ry,side,skin)
+        _breast(b+Vector2(side*1.3,2.3),rx,ry*0.97,side,cloth)
+        _oval(b+Vector2(side*1.7,5.8),5.6,2.7,Color(0.36,0.18,0.33,0.40))
+        _oval(b+Vector2(side*2.7,-0.2)+o*0.2,3.2,2.2,Color(0.80,0.52,0.68,0.45),side*0.5)
+        cv.draw_arc(b+Vector2(side*1.3,2.3),rx-0.2,-PI*0.5-side*1.25-0.55,-PI*0.5-side*1.25+0.55,10,Color("d79dae"),1.0,true)
+    cv.draw_line(cleft+Vector2(0,-3.5),cleft+Vector2(0,5.0+o_avg*0.6),skin_shade,1.2+part*0.4,true)
     # Cabeca: rosto oval de queixo fino, virando de leve para onde ela mira.
-    var H: Vector2 = B+Vector2(turn*0.8,-56.5)
+    var H: Vector2 = U+Vector2(turn*0.8+shx*0.3,-56.5)
     _shape([H+Vector2(-8.2,-3),H+Vector2(-7.6,3.5),H+Vector2(-4.2,8.2),H+Vector2(0,9.8),H+Vector2(4.2,8.2),H+Vector2(7.6,3.5),H+Vector2(8.2,-3),H+Vector2(5.5,-8.5),H+Vector2(0,-10),H+Vector2(-5.5,-8.5)],skin)
     for side in [-1.0, 1.0]:
         _oval(H+Vector2(side*4.8+turn,3.6),2.3,1.4,Color(0.86,0.36,0.42,0.20))
@@ -672,10 +759,10 @@ func _character() -> void:
     # Cabelo da frente: topo arredondado, franja de lado e duas mechas nos ombros.
     _shape([H+Vector2(-9.2,-1),H+Vector2(-9.6,-7),H+Vector2(-5.5,-12),H+Vector2(0,-13),H+Vector2(5.5,-12),H+Vector2(9.6,-7),H+Vector2(9.2,-1),H+Vector2(7.2,-5.5),H+Vector2(3,-8.2),H+Vector2(-1.5,-6.2),H+Vector2(-5,-7.5),H+Vector2(-7.6,-4)],hair)
     cv.draw_polyline(PackedVector2Array([H+Vector2(-5.5,-10),H+Vector2(-1,-11.4),H+Vector2(4,-10.4)]),Color("3d2a4c"),0.9,true)
-    _limb(H+Vector2(-8.8,-2),B+Vector2(-10.5+hs*0.5,-41),2.3,1.5,hair)
-    _limb(H+Vector2(8.8,-2),B+Vector2(10.5+hs*0.5,-41),2.3,1.5,hair)
+    _limb(H+Vector2(-8.8,-2),U+Vector2(-10.5+hs*0.5,-41),2.3,1.5,hair)
+    _limb(H+Vector2(8.8,-2),U+Vector2(10.5+hs*0.5,-41),2.3,1.5,hair)
     # Braco direito: o ombro, o antebraco e os dedos acompanham o objeto.
-    var rest: Vector2 = B+Vector2(16.5-swing,-24.5)
+    var rest: Vector2 = U+Vector2(16.5-swing,-24.5-run*5.0)
     var raised: Vector2 = cleft+Vector2(0,-9.0*extract)
     var ready: Vector2 = cleft+aim*33.0+Vector2(3,-6)
     var hand: Vector2 = rest.lerp(cleft,reach)
@@ -683,7 +770,7 @@ func _character() -> void:
         hand=cleft.lerp(raised,extract)
     if pose > 0.60:
         hand=raised.lerp(ready,extend)
-    var shoulder: Vector2 = B+Vector2(12,-44)
+    var shoulder: Vector2 = U+Vector2(12,-44)
     var elbow: Vector2 = shoulder.lerp(hand,0.51)+Vector2(6,5)
     _limb(shoulder,elbow,3.3,2.7,sleeve)
     _limb(elbow,hand,2.5,2.0,skin)
@@ -706,9 +793,12 @@ func _monster() -> void:
     _ygona(g.draw_monster, g.monster_lit, g.monster_state == "PERSEGUINDO" and not g.monster_lit)
 
 func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
-    ## Ygona: cadaver comprido de vestido rasgado, pescoco quebrado, orbitas
-    ## vazias e um sorriso cortado ate as orelhas. Aparicao ficticia e abstrata:
-    ## nao reproduz o rosto de nenhuma pessoa real.
+    ## Ygona, a "Afrodite do mal": uma deusa de marmore que apodreceu no fundo
+    ## do mar. Concha partida como aureola, cabelo encharcado ate os quadris,
+    ## tunica grega em farrapos pingando agua preta, pele rachada com veias
+    ## acesas e o peito aberto e costurado: falta nela o que ela tira das
+    ## outras. Metade do rosto ainda e bela; a outra metade e osso.
+    ## Criatura ficticia: nao reproduz o rosto de nenhuma pessoa real.
     var base: Vector2 = screen(at)
     var t: float = g.real_time
     var bob: float = 0.0 if lit else sin(g.time_passed*6.0)*2.0
@@ -720,62 +810,129 @@ func _ygona(at: Vector2, lit: bool, chasing: bool) -> void:
     if fposmod(t*tempo,1.0) < 0.08:
         tilt += randf_range(-0.28,0.28)
     var s: float = 1.24
-    var bone: Color = Color("cfc4c6") if lit else Color("8d7f86")
+    var marble: Color = Color("d6cdc8") if lit else Color("8a8085")
+    var marble_dk: Color = marble.darkened(0.38)
+    var cloth: Color = Color("aaa298") if lit else Color("57535a")
+    var rot: Color = Color("3b1220")
+    var vein: Color = Color(0.85,0.10,0.22,0.85) if not lit else Color(0.55,0.08,0.16,0.8)
+    var hair: Color = Color("07060a")
+    var wet: Color = Color(0.03,0.06,0.07,0.85)
+    var y: float = bob
     cv.draw_set_transform(base,0.0,Vector2(s,s))
-    var p: Vector2 = Vector2.ZERO
-    poly([p+Vector2(-21,1),p+Vector2(0,9),p+Vector2(21,1),p+Vector2(0,-8)],Color(0,0,0,.55))
-    # Vestido em farrapos, encharcado na barra.
-    poly([p+Vector2(-22,-2),p+Vector2(-15,5),p+Vector2(-9,-3),p+Vector2(-3,6),p+Vector2(4,-2),p+Vector2(10,6),p+Vector2(16,-3),p+Vector2(23,2),p+Vector2(14,-44+bob),p+Vector2(8,-58+bob),p+Vector2(-8,-58+bob),p+Vector2(-14,-44+bob)],Color("0a0910"))
-    poly([p+Vector2(-15,5),p+Vector2(-9,-3),p+Vector2(-3,6),p+Vector2(4,-2),p+Vector2(10,6),p+Vector2(13,-9),p+Vector2(1,-17),p+Vector2(-12,-11)],Color("36070f"))
-    # Torax aberto: costelas a mostra.
-    poly([p+Vector2(-9,-52+bob),p+Vector2(9,-52+bob),p+Vector2(7,-31+bob),p+Vector2(0,-25+bob),p+Vector2(-7,-31+bob)],Color("241622"))
-    for i in range(4):
-        var ry: float = -48.0+float(i)*5.0+bob
-        var rw: float = 7.0-float(i)*0.7
-        cv.draw_line(p+Vector2(-rw,ry),p+Vector2(-1.2,ry+1.6),bone.darkened(0.25),1.3)
-        cv.draw_line(p+Vector2(rw,ry),p+Vector2(1.2,ry+1.6),bone.darkened(0.25),1.3)
-    cv.draw_line(p+Vector2(0,-50+bob),p+Vector2(0,-29+bob),Color("4a0b17"),1.6)
-    # Bracos compridos demais; na perseguicao eles se estendem para a jogadora.
+    # Sombra e a poca que ela vai deixando.
+    _oval(Vector2(0,1),23.0,8.0,Color(0,0,0,.55))
+    _oval(Vector2(4,2),15.0,4.6,Color(0.04,0.08,0.09,0.65))
+    # Cabelo comprido e encharcado, colado nas costas ate os quadris.
+    var hs: float = sin(t*1.3)*1.4
+    _shape([Vector2(-10,-78+y),Vector2(10,-78+y),Vector2(16,-60+y),Vector2(17+hs,-40+y),Vector2(13+hs,-24+y*0.5),Vector2(6+hs,-29+y),Vector2(hs,-21+y*0.5),Vector2(-7+hs,-28+y),Vector2(-14+hs,-22+y*0.5),Vector2(-18+hs,-40+y),Vector2(-16,-61+y)],hair,false)
+    # Tronco de marmore magro demais: clavículas, cintura de vespa.
+    _shape([Vector2(-11,-58+y),Vector2(0,-60+y),Vector2(11,-58+y),Vector2(10.5,-49+y),Vector2(6,-40+y),Vector2(-6,-40+y),Vector2(-10.5,-49+y)],marble,false)
+    cv.draw_line(Vector2(-9,-57+y),Vector2(-1.5,-55.5+y),marble_dk,1.0,true)
+    cv.draw_line(Vector2(9,-57+y),Vector2(1.5,-55.5+y),marble_dk,1.0,true)
+    # O peito: duas cavidades abertas e costuradas com linha grossa.
+    for side in [-1.0, 1.0]:
+        var w: Vector2 = Vector2(side*5.0,-49.5+y)
+        _oval(w,4.8,3.9,rot)
+        _oval(w+Vector2(side*0.3,0.4),3.0,2.3,Color("120509"))
+        for k in range(3):
+            var sx: float = w.x-2.8+float(k)*2.8
+            cv.draw_line(Vector2(sx-0.9,w.y-2.8),Vector2(sx+0.9,w.y+2.8),Color("c9bcae"),0.7,true)
+        cv.draw_line(w+Vector2(side*0.5,3.2),w+Vector2(side*0.9,7.5+sin(t*2.0+side)*1.0),Color("4a0b17"),1.0,true)
+    for i in range(3):
+        var ry: float = -44.0+float(i)*1.9+y
+        cv.draw_line(Vector2(-6.0+float(i)*0.5,ry),Vector2(-1.0,ry+0.9),marble_dk,0.8,true)
+        cv.draw_line(Vector2(6.0-float(i)*0.5,ry),Vector2(1.0,ry+0.9),marble_dk,0.8,true)
+    # Rachaduras com brilho vermelho por dentro.
+    cv.draw_polyline(PackedVector2Array([Vector2(2,-59+y),Vector2(-1,-55+y),Vector2(1.5,-52+y),Vector2(-0.5,-45+y)]),vein,0.8,true)
+    cv.draw_polyline(PackedVector2Array([Vector2(-10,-50+y),Vector2(-7,-47+y),Vector2(-8,-43+y)]),vein,0.7,true)
+    # Tunica grega em farrapos, com cintura marcada e barra rasgada.
+    poly([Vector2(-6.5,-43+y),Vector2(6.5,-43+y),Vector2(5.5,-38+y),Vector2(10,-29+y),Vector2(14,-14),Vector2(19,-2),Vector2(14,4),Vector2(10,-3),Vector2(5,6),Vector2(0,-1),Vector2(-5,5),Vector2(-9,-4),Vector2(-14,4),Vector2(-19,-1),Vector2(-14,-14),Vector2(-10,-29+y),Vector2(-5.5,-38+y)],cloth)
+    _limb(Vector2(9.5,-57.5+y),Vector2(6.5,-41+y),2.3,3.0,cloth)    # alca no ombro
+    for fx in [-6.0,-2.0,2.5,7.0]:
+        cv.draw_line(Vector2(fx*0.6,-36+y),Vector2(fx*1.9,-3),cloth.darkened(0.3),0.9,true)
+    cv.draw_line(Vector2(-6,-38.5+y),Vector2(6,-38.5+y),Color("3a2a1c"),1.4,true)
+    # Barra encharcada, pingando, com algas presas.
+    poly([Vector2(-15,-11),Vector2(0,-14),Vector2(15,-11),Vector2(19,-2),Vector2(14,4),Vector2(10,-3),Vector2(5,6),Vector2(0,-1),Vector2(-5,5),Vector2(-9,-4),Vector2(-14,4),Vector2(-19,-1)],wet)
+    for dx in [-14.0,-5.0,5.0,14.0]:
+        var drip: float = fposmod(t*1.6+dx*0.37,1.0)
+        cv.draw_circle(Vector2(dx,4.0+drip*5.0),0.9,Color(0.05,0.10,0.12,0.9*(1.0-drip)))
+    for ax in [-11.0, 3.0, 12.0]:
+        cv.draw_polyline(PackedVector2Array([Vector2(ax,-22+y*0.5),Vector2(ax+1.5+sin(t*1.9+ax),-13),Vector2(ax-0.5,-6),Vector2(ax+1.0+sin(t*2.3+ax)*1.5,3)]),Color("16261c"),1.2,true)
+    # Bracos compridos de estatua; na perseguicao eles se estendem para a jogadora.
     var toward: Vector2 = (screen(g.draw_player)-base).normalized() if chasing else Vector2.ZERO
     for side in [-1.0, 1.0]:
-        var sh: Vector2 = p+Vector2(side*12.0,-53+bob)
-        var el: Vector2 = p+Vector2(side*20.0,-33+bob)
-        var hd: Vector2 = p+Vector2(side*22.0,-9+bob*0.5)
+        var sh: Vector2 = Vector2(side*11.0,-56+y)
+        var el: Vector2 = Vector2(side*19.0,-36+y)
+        var hd: Vector2 = Vector2(side*21.0,-12+y*0.5)
         if chasing:
             var grab: float = 0.75+0.25*sin(t*9.0+side)
             el = sh+toward*15.0+Vector2(side*7.0,5.0)
             hd = sh+toward*(31.0*grab)+Vector2(side*5.0,-2.0)
-        cv.draw_line(sh,el,Color("12101a"),5.0)
-        cv.draw_line(el,hd,bone,2.6)
+        _limb(sh,el,2.5,1.9,marble)
+        _limb(el,hd,1.9,1.4,marble)
+        cv.draw_line(el+Vector2(-1,-2),el+Vector2(1.5,2.5),vein,0.6,true)
         var reach: Vector2 = (hd-el).normalized()
-        for f in [-0.55, 0.0, 0.55]:
-            var tip: Vector2 = hd+reach.rotated(f)*9.5
-            cv.draw_line(hd,tip,bone,1.4)
-            cv.draw_line(tip,tip+reach.rotated(f)*2.5,Color("36070f"),1.4)
-    # Pescoco quebrado e cabeca pendendo.
-    cv.draw_line(p+Vector2(0,-58+bob),p+Vector2(0,-52+bob),bone.darkened(0.2),3.6)
-    cv.draw_set_transform(base+Vector2(0,-58+bob)*s,tilt,Vector2(s,s))
-    cv.draw_circle(Vector2(0,-9),13.0,Color("0b0810"))
-    cv.draw_circle(Vector2(0,-10),8.6,bone)
-    poly([Vector2(-8,-7),Vector2(8,-7),Vector2(4.5,3),Vector2(0,5.5),Vector2(-4.5,3)],bone)
+        _oval(hd+reach*1.5,2.2,1.7,marble,reach.angle())
+        for f in [-0.5,-0.17,0.17,0.5]:
+            var knuckle: Vector2 = hd+reach.rotated(f)*6.5
+            var tip: Vector2 = knuckle+reach.rotated(f*1.3)*4.0
+            cv.draw_line(hd+reach*1.5,knuckle,marble,1.1,true)
+            cv.draw_line(knuckle,tip,Color("0a0508"),1.3,true)         # unhas pretas compridas
+            cv.draw_circle(tip,0.6,Color("5c0f1d"))
+    # Pescoco comprido e quebrado; a cabeca pende para os lados.
+    _limb(Vector2(0,-60+y),Vector2(0,-65+y),2.2,2.0,marble)
+    cv.draw_set_transform(base+Vector2(0,-65+y)*s,tilt,Vector2(s,s))
+    # Aureola: a concha de Venus, rachada e com um pedaco arrancado.
+    var shell: Color = Color("a8928f") if lit else Color("5b4a50")
+    var fan: PackedVector2Array = PackedVector2Array([Vector2(0,-8)])
+    for k in range(17):
+        var a: float = PI+0.2+(PI-0.4)*float(k)/16.0
+        var r: float = 19.0+1.8*float(k%2)
+        if k >= 10 and k <= 12:
+            r *= 0.62+0.1*float(k%2)        # o pedaco que falta
+        fan.append(Vector2(0,-8)+Vector2.from_angle(a)*r)
+    cv.draw_colored_polygon(fan,shell)
+    for k in range(0,17,2):
+        cv.draw_line(Vector2(0,-8),fan[k+1],shell.darkened(0.4),0.8,true)
+    # Cabelo molhado colado no cranio.
+    _oval(Vector2(0,-10),10.0,10.5,hair)
+    # Rosto de deusa: oval, queixo fino, marmore sujo.
+    _shape([Vector2(-7.5,-12),Vector2(-8,-6),Vector2(-7,0),Vector2(-4,4.5),Vector2(0,6),Vector2(4,4.5),Vector2(7,0),Vector2(8,-6),Vector2(7.5,-12),Vector2(4.5,-16.5),Vector2(0,-17.5),Vector2(-4.5,-16.5)],marble,false)
+    # Metade direita descarnada: carne viva e osso do maxilar.
+    poly([Vector2(0.8,-5),Vector2(6.5,-9),Vector2(7.9,-5),Vector2(7,0),Vector2(4,4.5),Vector2(0.8,5.8)],rot)
+    cv.draw_line(Vector2(2,3.8),Vector2(6.6,-1),Color("cfc4b8"),0.9,true)
     var eyes: Color = Color("c7f3ff") if lit else Color("ff3b6b")
+    # Olho esquerdo: ainda bonito, com cilios longos, mas a esclera e preta.
+    var le: Vector2 = Vector2(-3.5,-8.5)
+    _oval(le,2.6,1.4,Color("050307"))
+    cv.draw_circle(le+Vector2(0.2,0.1),0.95,eyes)
+    for k in range(4):
+        var lx: float = le.x-2.2+float(k)*1.4
+        cv.draw_line(Vector2(lx,le.y-1.2),Vector2(lx-1.0,le.y-2.6),Color("050307"),0.5,true)
+    cv.draw_polyline(PackedVector2Array([le+Vector2(-2.8,-2.9),le+Vector2(0,-3.9),le+Vector2(2.6,-3.2)]),Color("120c14"),0.8,true)
+    # Olho direito: orbita vazia, so uma brasa la no fundo.
+    var re: Vector2 = Vector2(3.6,-8.5)
+    cv.draw_circle(re,2.9,Color("050307"))
+    cv.draw_circle(re+Vector2(0,0.4),0.9,eyes)
     for side in [-1.0, 1.0]:
-        cv.draw_circle(Vector2(side*4.0,-10.5),3.5,Color("050307"))
-        cv.draw_circle(Vector2(side*4.0,-10.2),1.1,eyes)
-        # Lagrimas pretas.
-        cv.draw_line(Vector2(side*4.0,-7.5),Vector2(side*4.6,0.5+sin(t*2.0+side)*1.2),Color("050307"),1.3)
-    # Sorriso cortado, com dentes demais.
-    cv.draw_polyline(PackedVector2Array([Vector2(-7.5,-6),Vector2(-4.5,-1.5),Vector2(0,-0.3),Vector2(4.5,-1.5),Vector2(7.5,-6)]),Color("070305"),2.6)
-    for tx in [-4.5,-2.3,0.0,2.3,4.5]:
-        cv.draw_line(Vector2(tx,-1.9+absf(tx)*0.12),Vector2(tx,0.3+absf(tx)*0.05),Color("e6dccf"),0.9)
-    # Cabelo escorrido por cima do rosto.
-    # (as mechas caem pelos lados; so uma atravessa o rosto, para ele continuar legivel)
-    for hx in [-12.0,-9.5,-7.5,1.5,7.5,9.5,12.0]:
-        var hl: float = 12.0+fposmod(hx*7.3,13.0)
-        cv.draw_line(Vector2(hx*0.85,-21),Vector2(hx+sin(t*1.7+hx)*1.4,hl),Color("0d0912"),1.0 if absf(hx) < 5.0 else 2.2)
+        var ex: float = side*3.5
+        cv.draw_line(Vector2(ex,-7),Vector2(ex+side*0.4,1.0+sin(t*2.0+side)*1.2),Color("050307"),0.9,true)
+    cv.draw_line(Vector2(0,-6.5),Vector2(-0.6,-2.5),marble_dk,0.7,true)
+    # Boca: labio vermelho de um lado, rasgo ate a orelha do outro.
+    poly([Vector2(-3.6,0.6),Vector2(-1.2,-0.2),Vector2(0,0.2),Vector2(0.6,1.6),Vector2(-1.4,2.2)],Color("6b0f22"))
+    poly([Vector2(0,0.4),Vector2(4,-1.2),Vector2(7.6,-4.4),Vector2(6.4,0.6),Vector2(3.4,2.4),Vector2(0.4,1.8)],Color("070305"))
+    for k in range(5):
+        var tx: float = 1.2+float(k)*1.3
+        var ty: float = 0.6-float(k)*0.95
+        cv.draw_line(Vector2(tx,ty),Vector2(tx,ty+1.4),Color("e6dccf"),0.6,true)
+    cv.draw_polyline(PackedVector2Array([Vector2(-2,-17.4),Vector2(-1,-14),Vector2(-2.5,-11.5)]),vein,0.6,true)
+    # Mechas encharcadas caindo pelos lados (uma atravessa a metade podre).
+    for hx in [-11.0,-9.0,-7.5,5.5,7.5,9.5,11.5]:
+        var hl: float = 10.0+fposmod(hx*7.3,12.0)
+        cv.draw_line(Vector2(hx*0.75,-18),Vector2(hx+sin(t*1.7+hx)*1.3,hl),hair,1.0 if absf(hx) < 6.0 else 2.2,true)
     cv.draw_set_transform(base,0.0,Vector2(s,s))
     if lit:
-        cv.draw_arc(p+Vector2(0,-40),40,0,TAU,40,Color(.65,.83,1.0,.30),1.6)
+        cv.draw_arc(Vector2(0,-42),42,0,TAU,40,Color(.65,.83,1.0,.30),1.6)
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _vulto(v: Dictionary) -> void:

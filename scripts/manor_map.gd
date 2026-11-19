@@ -6,9 +6,18 @@ const W: int = 53
 const H: int = 37
 
 const FOYER_DOOR: Vector2i = Vector2i(26, 27)
+## Paredes Espectrais: trechos de dois blocos que so se atravessam com a luz
+## espectral acesa. No mapa estatico sao piso (o cache nao as desenha); o
+## jogo as trata como parede para tudo e todos, menos para a protagonista
+## em modo espectral. Afrodite nunca passa por elas.
+const SPECTRAL_PASSAGES: Array = [
+    [Vector2i(18, 20), Vector2i(18, 21)],   # QUARTO <-> SALÃO
+    [Vector2i(34, 30), Vector2i(34, 31)]    # VESTÍBULO <-> OFICINA
+]
 
 var cells: Array = []
 var blocked: Dictionary = {}   # celulas de piso fechadas dinamicamente (portas)
+var spectral: Dictionary = {}  # Vector2i -> true: paredes atravessaveis so na luz espectral
 var nav: AStarGrid2D
 var rooms: Array = [
     {"name":"BIBLIOTECA", "x":2, "y":2, "w":16, "h":13, "shade":Color("253543")},
@@ -45,7 +54,12 @@ func _init() -> void:
     # FOYER_DOOR e piso no mapa estatico e bloqueada dinamicamente.
     wall_line(19, 27, 15, true)
     cells[FOYER_DOOR.y][FOYER_DOOR.x] = 0
-    # Objetos sólidos visuais são desenhados no jogo, não bloqueiam corredores.
+    for passage in SPECTRAL_PASSAGES:
+        for cell in passage:
+            cells[cell.y][cell.x] = 0
+            spectral[cell] = true
+    # Os moveis bloqueiam so a protagonista (ver "bodies" em can_stand);
+    # a grade de navegacao da entidade continua so com as paredes.
     nav = AStarGrid2D.new()
     nav.region = Rect2i(0, 0, W, H)
     nav.cell_size = Vector2(TS, TS)
@@ -53,7 +67,7 @@ func _init() -> void:
     nav.update()
     for y in range(H):
         for x in range(W):
-            if cells[y][x] == 1:
+            if cells[y][x] == 1 or spectral.has(Vector2i(x, y)):
                 nav.set_point_solid(Vector2i(x, y), true)
 
 func carve(x0: int, y0: int, width: int, height: int) -> void:
@@ -68,10 +82,35 @@ func wall_line(x0: int, y0: int, length: int, horizontal: bool) -> void:
         if x >= 1 and y >= 1 and x < W-1 and y < H-1:
             cells[y][x] = 1
 
-func is_wall_cell(x: int, y: int) -> bool:
+func is_wall_cell(x: int, y: int, phasing: bool = false) -> bool:
+    ## "phasing": quem pergunta atravessa Paredes Espectrais (so a protagonista,
+    ## com a luz espectral acesa, e o facho espectral).
     if x < 0 or y < 0 or x >= W or y >= H:
         return true
-    return cells[y][x] == 1 or blocked.has(Vector2i(x, y))
+    if cells[y][x] == 1:
+        return true
+    var cell: Vector2i = Vector2i(x, y)
+    if blocked.has(cell):
+        return true
+    return not phasing and spectral.has(cell)
+
+func is_spectral_cell(x: int, y: int) -> bool:
+    return spectral.has(Vector2i(x, y))
+
+func touches_spectral(point: Vector2, radius: float = 10.0) -> bool:
+    ## A protagonista esta (mesmo que em parte) dentro de uma Parede Espectral.
+    for dx in [-radius, radius]:
+        for dy in [-radius, radius]:
+            var p: Vector2 = point + Vector2(dx, dy)
+            if spectral.has(Vector2i(int(floor(p.x / TS)), int(floor(p.y / TS)))):
+                return true
+    return false
+
+func passage_center(passage: Array) -> Vector2:
+    var sum: Vector2 = Vector2.ZERO
+    for cell in passage:
+        sum += cell_center(cell.x, cell.y)
+    return sum / float(passage.size())
 
 func set_blocked(cell: Vector2i, closed: bool) -> void:
     # Porta: fecha/abre colisao, linha de visao e pathfinding de uma vez.
@@ -81,42 +120,48 @@ func set_blocked(cell: Vector2i, closed: bool) -> void:
         blocked.erase(cell)
     nav.set_point_solid(cell, closed)
 
-func is_wall_at(point: Vector2) -> bool:
-    return is_wall_cell(int(floor(point.x / TS)), int(floor(point.y / TS)))
+func is_wall_at(point: Vector2, phasing: bool = false) -> bool:
+    return is_wall_cell(int(floor(point.x / TS)), int(floor(point.y / TS)), phasing)
 
-func can_stand(point: Vector2, radius: float = 10.0) -> bool:
+func can_stand(point: Vector2, radius: float = 10.0, phasing: bool = false, bodies: Array = []) -> bool:
+    ## "bodies": retangulos (mundo) de moveis e objetos solidos para quem anda.
     for dx in [-radius, radius]:
         for dy in [-radius, radius]:
-            if is_wall_at(point + Vector2(dx, dy)):
+            if is_wall_at(point + Vector2(dx, dy), phasing):
+                return false
+    if not bodies.is_empty():
+        var box: Rect2 = Rect2(point - Vector2(radius, radius), Vector2(radius, radius) * 2.0)
+        for body in bodies:
+            if box.intersects(body):
                 return false
     return true
 
-func slide(pos: Vector2, delta: Vector2, radius: float = 10.0) -> Vector2:
+func slide(pos: Vector2, delta: Vector2, radius: float = 10.0, phasing: bool = false, bodies: Array = []) -> Vector2:
     var nx = pos + Vector2(delta.x, 0)
-    if can_stand(nx, radius):
+    if can_stand(nx, radius, phasing, bodies):
         pos = nx
     var ny = pos + Vector2(0, delta.y)
-    if can_stand(ny, radius):
+    if can_stand(ny, radius, phasing, bodies):
         pos = ny
     return pos
 
-func has_wall_between(a: Vector2, b: Vector2) -> bool:
+func has_wall_between(a: Vector2, b: Vector2, phasing: bool = false) -> bool:
     var dist = a.distance_to(b)
     if dist < 1.0:
         return false
     var steps = int(ceil(dist / 8.0))
     for i in range(1, steps + 1):
-        if is_wall_at(a.lerp(b, float(i) / float(steps))):
+        if is_wall_at(a.lerp(b, float(i) / float(steps)), phasing):
             return true
     return false
 
-func ray_end(origin: Vector2, angle: float, max_dist: float) -> Vector2:
+func ray_end(origin: Vector2, angle: float, max_dist: float, phasing: bool = false) -> Vector2:
     var dir = Vector2.from_angle(angle)
     var previous = origin
     var n = int(ceil(max_dist / 8.0))
     for i in range(1, n + 1):
         var probe = origin + dir * min(float(i) * 8.0, max_dist)
-        if is_wall_at(probe):
+        if is_wall_at(probe, phasing):
             return previous
         previous = probe
     return origin + dir * max_dist
@@ -124,9 +169,26 @@ func ray_end(origin: Vector2, angle: float, max_dist: float) -> Vector2:
 func route(a: Vector2, b: Vector2) -> Array:
     var start = Vector2i(int(a.x / TS), int(a.y / TS))
     var finish = Vector2i(int(b.x / TS), int(b.y / TS))
+    if spectral.has(finish):
+        # A protagonista entrou numa Parede Espectral: a entidade nao a segue
+        # por dentro, mas espera na boca da passagem do lado em que esta.
+        finish = _spectral_mouth(finish, a)
     if is_wall_cell(start.x, start.y) or is_wall_cell(finish.x, finish.y):
         return []
     return nav.get_id_path(start, finish)
+
+func _spectral_mouth(cell: Vector2i, from: Vector2) -> Vector2i:
+    var best: Vector2i = cell
+    var best_d: float = INF
+    for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+        var n: Vector2i = cell + step
+        if is_wall_cell(n.x, n.y):
+            continue
+        var d: float = cell_center(n.x, n.y).distance_to(from)
+        if d < best_d:
+            best_d = d
+            best = n
+    return best
 
 func room_name(point: Vector2) -> String:
     var tile = Vector2i(int(point.x / TS), int(point.y / TS))

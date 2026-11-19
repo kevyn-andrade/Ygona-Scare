@@ -381,7 +381,7 @@
       "z": 648.68
     },
     {
-      "count": 11,
+      "count": 10,
       "diag": 38,
       "h": 81,
       "path": "res://assets/render_cache/walls/d38.png",
@@ -391,7 +391,7 @@
       "z": 664.04
     },
     {
-      "count": 10,
+      "count": 9,
       "diag": 39,
       "h": 80,
       "path": "res://assets/render_cache/walls/d39.png",
@@ -641,7 +641,7 @@
       "z": 1048.04
     },
     {
-      "count": 8,
+      "count": 7,
       "diag": 64,
       "h": 80,
       "path": "res://assets/render_cache/walls/d64.png",
@@ -651,7 +651,7 @@
       "z": 1063.4
     },
     {
-      "count": 8,
+      "count": 7,
       "diag": 65,
       "h": 81,
       "path": "res://assets/render_cache/walls/d65.png",

@@ -231,73 +231,297 @@ func _shadow_reach() -> void:
             cv.draw_line(pts[n],pts[n]+d2.rotated(r)*8.0,ink,1.5)
 
 func _hanged(h: Dictionary) -> void:
-    ## Uma das tres, embrulhada no lencol e pendurada pelo pescoco.
+    ## Uma das tres, enrolada num lencol encharcado e pendurada pelo pescoco.
+    ## O pescoco quebrou: a cabeca tomba de lado. Pelo rasgo do lencol aparece
+    ## o rosto cinzento, de olhos arregalados, que segue a jogadora de perto.
+    ## O sangue atravessou o tecido, escorre pelo braco solto e pelos pes
+    ## arroxeados e pinga numa poca que nao para de crescer.
     var p: Vector2 = screen(h["at"])
     var lit: bool = g.is_illuminated(h["at"])
     var idx: float = float(h["idx"])
     var t: float = g.real_time
-    var near: bool = g.draw_player.distance_to(h["at"]) < 150.0
+    var gap: float = g.draw_player.distance_to(h["at"])
+    var near: bool = gap < 150.0
+    var blood: Color = Color("4a0b17")
+    var fresh: Color = Color("74101f")
+    var clot: Color = Color("2a050c")
+    # --- Poca de sangue no piso, com respingos e o pingo caindo nela ---
     cv.draw_set_transform(p,0.0,Vector2(1.0,0.5))
-    cv.draw_circle(Vector2.ZERO,13.0,Color(0,0,0,0.4))
-    cv.draw_circle(Vector2(2,1),8.0,Color(0.30,0.02,0.07,0.8))
-    # Sob a luz ela balanca mais, como se tivesse acabado de se mexer.
-    var sway: float = sin(t*0.8+idx*2.0)*(0.035+(0.07 if lit else 0.0)) + (sin(t*23.0)*0.012 if near and not lit else 0.0)
-    cv.draw_set_transform(p+Vector2(0,-152),sway,Vector2.ONE)
-    var cloth: Color = Color("9c9488")
-    cv.draw_line(Vector2(0,-40),Vector2(0,62),Color("6b5d4a"),1.7)
-    poly([Vector2(-9,68),Vector2(9,68),Vector2(13,88),Vector2(10,114),Vector2(5,132),Vector2(-5,132),Vector2(-10,114),Vector2(-13,88)],cloth)
-    poly([Vector2(2,68),Vector2(9,68),Vector2(13,88),Vector2(10,114),Vector2(5,132),Vector2(2,132)],cloth.darkened(0.22))
-    # Cabeca tombada sobre o no.
-    cv.draw_circle(Vector2(2.5,66),8.2,cloth.lightened(0.06))
-    cv.draw_line(Vector2(-8,75),Vector2(9,76),Color("6b5d4a"),2.0)
-    # O peito do lencol empapado, exatamente onde ela cortou.
-    poly([Vector2(-9,86),Vector2(9,86),Vector2(6,101),Vector2(0,106),Vector2(-6,101)],Color("4a0b17"))
-    for dx in [-5.0,-1.0,4.0]:
-        cv.draw_line(Vector2(dx,101),Vector2(dx,112.0+fposmod(dx*5.3+idx*3.0,13.0)),Color("3a0812"),1.6)
-    # Cordas apertando o lencol e os pes para fora.
-    cv.draw_line(Vector2(-11,96),Vector2(11,98),Color("6b5d4a"),1.2)
-    cv.draw_line(Vector2(-9,118),Vector2(9,119),Color("6b5d4a"),1.2)
-    var twitch: float = sin(t*31.0)*1.2 if (lit and fposmod(t+idx,3.1) < 0.35) else 0.0
-    cv.draw_line(Vector2(-3,131),Vector2(-3.5+twitch,141),Color("7d7478"),2.6)
-    cv.draw_line(Vector2(3,131),Vector2(3.5-twitch,142),Color("7d7478"),2.6)
+    cv.draw_circle(Vector2.ZERO,17.0,Color(0,0,0,0.38))
+    for k in range(7):
+        var pa: float = TAU*float(k)/7.0+idx
+        cv.draw_circle(Vector2.from_angle(pa)*(6.0+_h(idx,float(k))*8.0),5.0+_h(float(k),idx)*4.5,clot)
+    cv.draw_circle(Vector2(1,0),10.5,blood)
+    cv.draw_circle(Vector2(-3,-3),4.0,Color(0.58,0.12,0.18,0.5))
+    for k in range(7):
+        var sa: float = TAU*_h(float(k)*3.1,idx+1.0)
+        cv.draw_circle(Vector2.from_angle(sa)*(21.0+_h(idx,float(k)*1.7)*12.0),0.9+_h(float(k),2.0)*1.5,blood)
+    var drop: float = fposmod(t*0.9+idx*0.37,1.0)
+    if drop > 0.72:
+        var rip: float = (drop-0.72)/0.28
+        cv.draw_arc(Vector2(-2,0),2.0+rip*10.0,0,TAU,18,Color(0.70,0.16,0.24,0.6*(1.0-rip)),1.2)
+    # --- Corpo: balanca na corda; sob a luz, convulsiona por instantes ---
+    var sway: float = sin(t*0.8+idx*2.0)*(0.03+(0.05 if lit else 0.0))
+    if lit and fposmod(t*0.7+idx*0.31,2.8) < 0.24:
+        sway += sin(t*47.0)*0.045
+    elif near and not lit:
+        sway += sin(t*23.0)*0.012
+    var origin: Vector2 = p+Vector2(0,-160)
+    var body_xf: Transform2D = Transform2D(sway,origin)
+    cv.draw_set_transform_matrix(body_xf)
+    var rope: Color = Color("6b5d4a")
+    var sheet: Color = Color("a1998c")
+    var sheet_dk: Color = sheet.darkened(0.28)
+    var skin: Color = Color("8a8b94")
+    var bruise: Color = Color("5a4660")
+    cv.draw_line(Vector2(0,-70),Vector2(2,60),rope,1.8,true)
+    cv.draw_line(Vector2(0.6,-60),Vector2(-0.6,-40),rope.darkened(0.3),0.6,true)
+    # Mortalha com forma de gente: ombros, cintura, joelhos colados.
+    var shroud: Array = [Vector2(-7,69),Vector2(7,69),Vector2(12,78),Vector2(11,92),Vector2(8,102),Vector2(10,113),Vector2(8,127),Vector2(5,139),Vector2(-5,139),Vector2(-8,127),Vector2(-10,113),Vector2(-8,102),Vector2(-11,92),Vector2(-12,78)]
+    _shape(shroud,sheet,true)
+    _shape([Vector2(2,70),Vector2(7,69),Vector2(12,78),Vector2(11,92),Vector2(8,102),Vector2(10,113),Vector2(8,127),Vector2(5,139),Vector2(1.5,139),Vector2(3,104)],sheet_dk,false)
+    for fl in [[-8.0,82.0,-3.0,96.0],[6.0,84.0,2.0,100.0],[-6.0,106.0,-2.0,124.0],[5.0,110.0,3.0,130.0]]:
+        cv.draw_line(Vector2(fl[0],fl[1]),Vector2(fl[2],fl[3]),sheet.darkened(0.4),0.7,true)
+    # O sangue atravessou o lencol: uma mancha no peito, onde a seita cortou,
+    # aureolada de rosa onde o tecido bebeu, e escorridos ate os pes.
+    var soak: Color = Color(0.55,0.20,0.24,0.35)
+    _shape([Vector2(-8,81),Vector2(-2,78),Vector2(4,80),Vector2(7,86),Vector2(4,95),Vector2(-2,97),Vector2(-7,92)],soak,false)
+    _shape([Vector2(-6,83),Vector2(-1,81),Vector2(3,83),Vector2(5,88),Vector2(2,93),Vector2(-3,94),Vector2(-6,89)],blood,false)
+    _shape([Vector2(-3.5,85),Vector2(0.5,84),Vector2(2.5,88),Vector2(-0.5,91),Vector2(-3.5,89)],fresh,false)
+    cv.draw_line(Vector2(-4,87),Vector2(1.5,86),clot,1.0,true)           # o corte por baixo do pano
+    _shape([Vector2(-4,106),Vector2(1,105),Vector2(4,109),Vector2(1,114),Vector2(-4,112)],soak,false)
+    _shape([Vector2(-2.5,107),Vector2(1,106.5),Vector2(2.5,109.5),Vector2(-0.5,112)],blood.darkened(0.1),false)
+    var streaks: Array = [[-4.0,93.0,38.0,1.3],[0.0,95.0,30.0,1.0],[3.0,92.0,18.0,0.9],[-1.5,112.0,26.0,1.2],[2.0,111.0,16.0,0.8]]
+    for s in streaks:
+        var sx: float = float(s[0])
+        var sy: float = float(s[1])
+        var sl: float = float(s[2])*(0.92+0.08*sin(t*0.5+sx))
+        cv.draw_polyline(PackedVector2Array([Vector2(sx,sy),Vector2(sx+0.6,sy+sl*0.5),Vector2(sx*0.85,sy+sl)]),blood,float(s[3]),true)
+        cv.draw_circle(Vector2(sx*0.85,sy+sl),float(s[3])*0.9,blood)
+    var run: float = fposmod(t*0.35+idx*0.5,1.0)
+    cv.draw_circle(Vector2(-4.0+run*0.6,93.0+run*38.0),1.2,fresh)
+    # Cordas apertando o lencol, afundando no tecido.
+    for ry in [86.0,101.0,121.0]:
+        var half: float = 11.5 if ry < 90.0 else (8.5 if ry < 110.0 else 8.0)
+        cv.draw_polyline(PackedVector2Array([Vector2(-half,ry-1.0),Vector2(0,ry+1.2),Vector2(half,ry-0.6)]),Color("2e261d"),2.2,true)
+        cv.draw_polyline(PackedVector2Array([Vector2(-half,ry-1.0),Vector2(0,ry+1.2),Vector2(half,ry-0.6)]),rope,1.2,true)
+    # Um braco escapou do lencol: pende mole, roxo, e o sangue pinga dos dedos.
+    var hand: Vector2 = Vector2(-15.5,121.0)
+    _limb(Vector2(-11,79),Vector2(-15,100),2.6,2.1,skin)
+    _limb(Vector2(-15,100),hand,2.1,1.6,skin)
+    cv.draw_circle(Vector2(-13.5,88),1.4,bruise)
+    cv.draw_circle(Vector2(-15.2,108),1.1,bruise)
+    cv.draw_line(Vector2(-12,82),Vector2(-15.2,118),blood,0.9,true)
+    for f in [-1.6,-0.5,0.6,1.6]:
+        cv.draw_line(hand,hand+Vector2(f,6.0+absf(f)*-0.8),skin.darkened(0.15),0.9,true)
+        cv.draw_circle(hand+Vector2(f,6.0+absf(f)*-0.8),0.5,Color("1a0d12"))
+    var fd: float = fposmod(t*1.1+idx*0.7,1.0)
+    cv.draw_circle(hand+Vector2(0.4,7.0+fd*fd*32.0),1.0,Color(0.45,0.05,0.10,1.0-fd))
+    # Pes descalcos, arroxeados, com as pontas viradas para baixo.
+    var twitch: float = sin(t*31.0)*1.0 if (lit and fposmod(t+idx,3.1) < 0.35) else 0.0
+    var feet: Color = Color("6e5e78")
+    for fx in [-3.0, 3.0]:
+        var tip: Vector2 = Vector2(fx*1.1+(twitch if fx < 0.0 else -twitch),151.0)
+        _limb(Vector2(fx,138),tip,2.2,1.4,feet)
+        cv.draw_circle(tip,1.0,Color("2a1c2c"))
+        cv.draw_line(Vector2(fx,139),tip,blood,0.8,true)
+    cv.draw_circle(Vector2(-3.3,152.0+drop*drop*8.0),1.2,Color(0.45,0.05,0.10,1.0-drop))
+    # --- Cabeca: o pescoco quebrado a deixa tombada sobre o ombro ---
+    var tilt: float = 0.62+sin(t*0.6+idx)*0.04
+    const HEAD_SCALE: float = 1.3
+    var neck: Vector2 = Vector2(2,67)
+    cv.draw_set_transform_matrix(body_xf*Transform2D(tilt,Vector2(HEAD_SCALE,HEAD_SCALE),0.0,neck))
+    _shape([Vector2(-7.5,-6),Vector2(-6.5,-13),Vector2(0,-16.5),Vector2(6.5,-13),Vector2(7.5,-6),Vector2(5,0),Vector2(-5,0)],sheet,true)
+    cv.draw_line(Vector2(-6,0.5),Vector2(6,0.5),rope,2.2,true)                    # o no apertando
+    cv.draw_arc(Vector2(5.5,1.5),2.4,0,TAU,10,rope.darkened(0.2),1.4)
+    # O rasgo no lencol e o rosto cinzento la dentro.
+    var hole: PackedVector2Array = PackedVector2Array([Vector2(-5.5,-11),Vector2(-2,-13),Vector2(1.5,-12),Vector2(4,-13.5),Vector2(5,-9),Vector2(4.2,-5),Vector2(5,-2.5),Vector2(0.5,-1.5),Vector2(-3,-2.5),Vector2(-5.8,-4.5),Vector2(-4.6,-7.5)])
+    cv.draw_colored_polygon(hole,skin)
+    var torn: PackedVector2Array = hole.duplicate()
+    torn.append(hole[0])
+    cv.draw_polyline(torn,sheet.lightened(0.15),0.8,true)
+    for tk in [0,2,4,7,9]:
+        var e: Vector2 = hole[tk]
+        cv.draw_line(e,e+(e-Vector2(0,-7)).normalized()*1.8,sheet.lightened(0.1),0.5,true)
+    # Olhos arregalados em orbitas fundas; de perto, as pupilas encontram voce.
+    var look: Vector2 = Vector2.ZERO
     if near:
-        # De perto, da para ver que o lencol afundou onde ficam os olhos. Abertos.
-        cv.draw_circle(Vector2(-0.5,65),1.7,Color("0a0508"))
-        cv.draw_circle(Vector2(5.5,66),1.7,Color("0a0508"))
-    var drop: float = fposmod(t*0.55+idx*0.37,1.0)
-    cv.draw_circle(Vector2(0,142+drop*drop*12.0),1.3,Color(0.42,0.04,0.09,1.0-drop))
+        var to_hero: Vector2 = (screen(g.draw_player)+Vector2(0,-50))-(origin+Vector2(0,60))
+        look = to_hero.normalized().rotated(-(sway+tilt))*0.7
+    for ex in [-2.6, 2.0]:
+        var eye: Vector2 = Vector2(ex,-8.6)
+        cv.draw_circle(eye+Vector2(0,0.3),2.5,Color("1e141c"))              # orbita funda e roxa
+        _oval(eye,1.6,1.05,Color("c2b59c"))                                # esclera amarelada
+        cv.draw_line(eye+Vector2(-1.4,0.2),eye+Vector2(-0.5,0.0),Color(0.72,0.10,0.14,0.8),0.35,true)
+        cv.draw_line(eye+Vector2(1.4,0.3),eye+Vector2(0.6,-0.1),Color(0.72,0.10,0.14,0.7),0.35,true)
+        cv.draw_circle(eye+look,0.45 if near else 0.6,Color("0a0508"))
+    # Boca aberta num grito que nao saiu; sangue preto escorre pelo queixo.
+    var gape: float = 1.45+(0.7+0.3*sin(t*5.0) if near else 0.0)
+    _oval(Vector2(-0.5,-4.2),1.5,gape*0.9,Color("120508"))
+    cv.draw_line(Vector2(0.4,-3.0),Vector2(1.0,1.5),Color("1a0508"),0.9,true)
+    cv.draw_line(Vector2(-1.4,-3.2),Vector2(-1.8,0.5),Color("1a0508"),0.6,true)
+    # --- Cabelo comprido e molhado: escapa pelo alto do rasgo e cai reto,
+    # pelo peso, do lado da cabeca que tombou (sem cobrir o rosto) ---
+    cv.draw_set_transform_matrix(body_xf)
+    var roots: Array = [Vector2(1.5,-15.5),Vector2(4.0,-14.0),Vector2(6.0,-11.5),Vector2(7.2,-8.0)]
+    for k in range(roots.size()):
+        var root: Vector2 = neck+(roots[k] as Vector2).rotated(tilt)*HEAD_SCALE
+        var hlen: float = 22.0+fposmod(float(k)*7.3+idx*3.0,12.0)
+        var hw: float = sin(t*0.9+float(k))*0.7
+        strand(cv,[root,root+Vector2(1.4,4.0),root+Vector2(1.0+hw,hlen*0.55),root+Vector2(0.6+hw*1.4,hlen)],1.1,0.15,Color("0c0a10"))
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    # Moscas rodeando a cabeca.
+    var fly_c: Vector2 = origin+Vector2(4,58).rotated(sway)
+    for k in range(4):
+        var fa: float = t*(3.1+float(k)*0.7)+float(k)*1.9+idx
+        var fp: Vector2 = fly_c+Vector2(cos(fa)*(11.0+float(k)*2.0),sin(fa*1.7)*7.0)+Vector2(randf_range(-0.6,0.6),randf_range(-0.6,0.6))
+        cv.draw_circle(fp,0.85,Color("050305"))
 
 func _mannequin(m: Dictionary) -> void:
-    ## Manequim de costura da oficina. A cabeca sem rosto acompanha a jogadora;
-    ## depois que ele sai do lugar, um braco passa a apontar para ela.
+    ## Manequim de costura da oficina. Cabeca de gesso rachada, olhos fundos
+    ## e boca costurada que abre num sorriso quando ela chega perto. O peito
+    ## foi aberto em Y e costurado de volta, e ainda sangra. Bracos de
+    ## articulacoes de madeira: um pende quebrado ao contrario; o outro sobe
+    ## devagar e aponta para a jogadora com um dedo comprido e unha preta.
     var p: Vector2 = screen(m["at"])
+    var t: float = g.real_time
+    var seed: float = float(m["home"].x)*0.03+float(m["home"].y)*0.05
     var to: Vector2 = screen(g.draw_player)-p
-    var lean: float = clampf(to.x/110.0,-1.0,1.0)*3.2
+    var near: bool = g.draw_player.distance_to(m["at"]) < 150.0
+    var lit: bool = g.is_illuminated(m["at"])
+    var raise: float = smoothstep(0.0,1.0,float(m.get("raise",0.0)))
+    var side: float = 1.0 if to.x >= 0.0 else -1.0
+    var linen: Color = Color("b3a690")
+    var linen_dk: Color = linen.darkened(0.22)
+    var wood: Color = Color("8a775f")
+    var joint: Color = Color("a89275")
+    var plaster: Color = Color("d2c7b6")
+    var blood: Color = Color("5c0f1d")
+    var fresh: Color = Color("7a1424")
+    # Sombra: com o facho nela, estica para longe da jogadora.
     poly([p+Vector2(-13,0),p+Vector2(0,6),p+Vector2(13,0),p+Vector2(0,-6)],Color(0,0,0,.42))
-    for leg in [Vector2(-9,2),Vector2(9,2),Vector2(0,5)]:
-        cv.draw_line(p+Vector2(0,-6),p+leg,Color("3b3038"),2.0)
-    cv.draw_line(p+Vector2(0,-6),p+Vector2(0,-24),Color("3b3038"),2.6)
-    var cloth: Color = Color("b8ab9a")
-    poly([p+Vector2(-8,-22),p+Vector2(-12,-40),p+Vector2(-10,-53),p+Vector2(10,-53),p+Vector2(12,-40),p+Vector2(8,-22)],cloth)
-    poly([p+Vector2(1,-22),p+Vector2(1,-53),p+Vector2(10,-53),p+Vector2(12,-40),p+Vector2(8,-22)],cloth.darkened(0.18))
-    cv.draw_line(p+Vector2(0,-52),p+Vector2(0,-23),Color("6f6557"),1.0)
-    # O mesmo corte no peito, costurado com linha grossa.
-    cv.draw_line(p+Vector2(-8,-45),p+Vector2(8,-45),Color("5c0f1d"),2.0)
-    for sx in [-6.0,-2.0,2.0,6.0]:
-        cv.draw_line(p+Vector2(sx-1,-48),p+Vector2(sx+1,-42),Color("2a2026"),1.0)
-    if bool(m.get("moved",false)) and to.length() > 1.0:
-        var sh: Vector2 = p+Vector2(signf(to.x)*10.0,-50)
-        var tip: Vector2 = sh+to.normalized()*19.0
-        cv.draw_line(sh,tip,cloth.darkened(0.1),3.2)
-        cv.draw_line(tip,tip+to.normalized()*5.0,Color("6f6557"),1.4)
-    cv.draw_line(p+Vector2(0,-53),p+Vector2(lean*0.5,-58),Color("8d8172"),3.4)
-    cv.draw_circle(p+Vector2(lean,-64),7.2,Color("c9bdac"))
-    cv.draw_circle(p+Vector2(lean+1.5,-63),6.0,Color("b3a696"))
-    if g.draw_player.distance_to(m["at"]) < 135.0:
-        # Nenhum rosto. So duas marcas de dedo afundadas onde ficariam os olhos.
-        cv.draw_circle(p+Vector2(lean-2.6+lean*0.4,-65),1.3,Color("241a20"))
-        cv.draw_circle(p+Vector2(lean+2.6+lean*0.4,-65),1.3,Color("241a20"))
+    if lit and to.length() > 1.0:
+        var away: Vector2 = -to.normalized()*46.0
+        var perp: Vector2 = to.normalized().orthogonal()
+        poly([p-perp*5.0,p+perp*5.0,p+away+perp*9.0,p+away-perp*9.0],Color(0,0,0,0.30))
+    # Poca pequena embaixo, alimentada pelo que pinga da barra.
+    cv.draw_set_transform(p+Vector2(3,2),0.0,Vector2(1.0,0.5))
+    cv.draw_circle(Vector2.ZERO,6.0,blood.darkened(0.3))
+    cv.draw_circle(Vector2(-1,-1),3.2,blood)
+    cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    # Tripe de ferro enferrujado e haste.
+    for leg in [Vector2(-10,2),Vector2(10,2),Vector2(0,6)]:
+        cv.draw_line(p+Vector2(0,-6),p+leg,Color("2f262c"),2.2,true)
+        cv.draw_circle(p+leg,1.3,Color("4a3a36"))
+    cv.draw_line(p+Vector2(0,-6),p+Vector2(0,-26),Color("3b3038"),2.6,true)
+    # Braco quebrado, do lado oposto: pende e dobra o cotovelo ao contrario.
+    var sh2: Vector2 = p+Vector2(-side*9.5,-55)
+    var el2: Vector2 = sh2+Vector2(-side*3.0,11.0)
+    var wr2: Vector2 = el2+Vector2(side*3.5,9.5)
+    _limb(sh2,el2,1.9,1.6,wood)
+    _limb(el2,wr2,1.6,1.3,wood)
+    cv.draw_circle(el2,2.2,joint)
+    for f in [-1.2,0.0,1.2]:
+        cv.draw_line(wr2,wr2+Vector2(f*0.8+side*1.0,5.5),wood.darkened(0.2),0.8,true)
+    # Tronco: busto de linho manchado, mais escuro do lado da sombra.
+    var torso: Array = [p+Vector2(-9,-24),p+Vector2(-12,-36),p+Vector2(-10,-46),p+Vector2(-12,-54),p+Vector2(-6,-58),p+Vector2(6,-58),p+Vector2(12,-54),p+Vector2(10,-46),p+Vector2(12,-36),p+Vector2(9,-24)]
+    _shape(torso,linen,true)
+    _shape([p+Vector2(1,-24),p+Vector2(1,-58),p+Vector2(6,-58),p+Vector2(12,-54),p+Vector2(10,-46),p+Vector2(12,-36),p+Vector2(9,-24)],linen_dk,false)
+    cv.draw_circle(p+Vector2(-6,-31),3.0,Color(0.42,0.32,0.20,0.35))
+    cv.draw_circle(p+Vector2(5,-40),2.4,Color(0.42,0.32,0.20,0.30))
+    poly([p+Vector2(-9,-24),p+Vector2(9,-24),p+Vector2(8,-22),p+Vector2(-8,-22)],Color("3b3038"))
+    # Corte em Y, do ombro ao umbigo, costurado com linha preta grossa. Ainda sangra.
+    var cut: Array = [[p+Vector2(-8,-55),p+Vector2(0,-48)],[p+Vector2(8,-55),p+Vector2(0,-48)],[p+Vector2(0,-48),p+Vector2(0,-29)]]
+    for seg in cut:
+        cv.draw_line(seg[0],seg[1],blood,2.0,true)
+        cv.draw_line(seg[0],seg[1],fresh,0.8,true)
+        for k in range(4):
+            var sp: Vector2 = (seg[0] as Vector2).lerp(seg[1],(float(k)+0.5)/4.0)
+            var nrm: Vector2 = ((seg[1] as Vector2)-(seg[0] as Vector2)).normalized().orthogonal()*2.2
+            cv.draw_line(sp-nrm,sp+nrm,Color("140c10"),0.9,true)
+    for dx in [-1.5,1.0,3.0]:
+        var dl: float = 6.0+fposmod(dx*13.0+seed*40.0,7.0)
+        cv.draw_line(p+Vector2(dx*0.6,-30),p+Vector2(dx,-30+dl),blood,1.0,true)
+    var drip: float = fposmod(t*0.6+seed*7.0,1.0)
+    cv.draw_circle(p+Vector2(2.5,-23.0+drip*drip*24.0),0.9,Color(0.45,0.05,0.10,1.0-drip))
+    # Alfinetes espetados no busto.
+    for pin in [[Vector2(-8,-40),Vector2(-12,-43),Color("b0202a")],[Vector2(7,-50),Vector2(11,-53),Color("e8e2d6")],[Vector2(-4,-34),Vector2(-7,-31),Color("b0202a")],[Vector2(8,-31),Vector2(12,-29),Color("2a2a30")]]:
+        cv.draw_line(p+pin[0],p+pin[1],Color("c9c9cf"),0.6,true)
+        cv.draw_circle(p+pin[1],1.1,pin[2])
+    # Fita metrica pendurada no pescoco.
+    var tape: Color = Color("c9b25a")
+    for tx in [-1.0, 1.0]:
+        var tp: PackedVector2Array = PackedVector2Array([p+Vector2(tx*3.5,-59),p+Vector2(tx*6.0,-52),p+Vector2(tx*6.5,-44+tx*3.0)])
+        cv.draw_polyline(tp,tape,1.6,true)
+    # Pescoco de madeira, rachado, e a cabeca de gesso que vira para ela aos estalos.
+    var lean: float = clampf(to.x/110.0,-1.0,1.0)*3.4
+    var cock: float = side*(0.22+0.26*raise)
+    if near and fposmod(t*1.3+seed*9.0,1.0) < 0.07:
+        cock += sin(t*60.0)*0.25
+    var neck_top: Vector2 = p+Vector2(lean*0.5,-62)
+    cv.draw_line(p+Vector2(0,-57),neck_top,wood,3.4,true)
+    cv.draw_line(p+Vector2(-0.6,-58),p+Vector2(0.8,-61),Color("3b2c22"),0.6,true)
+    cv.draw_set_transform(neck_top+Vector2(lean*0.5,-8),cock,Vector2.ONE)
+    _shape([Vector2(-6.5,-4),Vector2(-5.8,-9),Vector2(0,-11),Vector2(5.8,-9),Vector2(6.5,-4),Vector2(5,3),Vector2(2,6.5),Vector2(-2,6.5),Vector2(-5,3)],plaster,true)
+    _shape([Vector2(1.5,-11),Vector2(5.8,-9),Vector2(6.5,-4),Vector2(5,3),Vector2(2,6.5),Vector2(1.5,6.5)],plaster.darkened(0.14),false)
+    # Rachaduras no gesso, uma delas lascou um pedaco da testa.
+    cv.draw_polyline(PackedVector2Array([Vector2(-1,-11),Vector2(-2.2,-7),Vector2(-0.8,-4.5),Vector2(-2.6,-1)]),Color("4f4440"),0.6,true)
+    cv.draw_polyline(PackedVector2Array([Vector2(4.5,-8.5),Vector2(2.6,-6.8),Vector2(3.4,-4.6)]),Color("4f4440"),0.5,true)
+    poly([Vector2(1.5,-10.6),Vector2(4.2,-9.6),Vector2(2.8,-8.2)],Color("2a2226"))
+    # Orbitas fundas: de perto, uma brasa vermelha acende la no fundo.
+    var glow: float = 0.0
+    if near:
+        glow = 0.55+0.45*sin(t*4.0+seed)
+    elif raise > 0.5:
+        glow = 0.25
+    for ex in [-2.6, 2.6]:
+        _oval(Vector2(ex,-3.6),1.9,1.4,Color("140c10"))
+        cv.draw_line(Vector2(ex-0.4,-2.4),Vector2(ex-0.6,0.4+absf(ex)*0.3),Color(0.20,0.10,0.10,0.55),0.5,true)
+        if glow > 0.0:
+            cv.draw_circle(Vector2(ex,-3.5),0.65,Color(1.0,0.28,0.20,glow))
+    # Boca costurada; os pontos esticam num sorriso quando ela se aproxima.
+    var grin: float = raise*(1.0 if near else 0.55)
+    var mouth: PackedVector2Array = PackedVector2Array()
+    var lower: PackedVector2Array = PackedVector2Array()
+    for k in range(7):
+        var u: float = float(k)/6.0
+        var corner: float = pow(2.0*u-1.0,2.0)        # 0 no meio, 1 nos cantos
+        var at_line: Vector2 = Vector2(lerpf(-4.2,4.2,u),2.4+grin*0.5*(1.0-corner)-grin*1.5*corner)
+        mouth.append(at_line)
+        lower.append(at_line+Vector2(0,grin*1.8*(1.0-corner)))
+    if grin > 0.05:
+        var gap_pts: PackedVector2Array = mouth.duplicate()
+        for k in range(5,0,-1):    # cantos sao comuns aos dois labios
+            gap_pts.append(lower[k])
+        cv.draw_colored_polygon(gap_pts,Color("1a0a0e"))
+    cv.draw_polyline(mouth,Color("2a1a1c"),0.8,true)
+    for k in range(1,6):
+        cv.draw_line(mouth[k]+Vector2(-0.3,-1.2),mouth[k]+Vector2(0.3,1.2+grin*1.6),Color("100808"),0.5,true)
+    cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
+    # Braco que aponta: sobe aos poucos e trava na direcao dela, tremendo.
+    var sh: Vector2 = p+Vector2(side*9.5,-55)
+    var target: Vector2 = screen(g.draw_player)+Vector2(0,-48)-sh
+    var rest: float = Vector2(side*0.2,1.0).angle()
+    var aim: float = lerp_angle(rest,target.angle(),raise)+sin(t*31.0+seed)*0.025*raise
+    var d1: Vector2 = Vector2.from_angle(aim)
+    var d2: Vector2 = Vector2.from_angle(lerp_angle(aim+side*0.5,aim,raise))
+    var el: Vector2 = sh+d1*(11.5+1.5*raise)
+    var wr: Vector2 = el+d2*(10.5+2.0*raise)
+    _limb(sh,el,2.3,1.9,wood)
+    _limb(el,wr,1.9,1.5,wood)
+    cv.draw_circle(sh,2.4,joint)
+    cv.draw_circle(el,2.1,joint)
+    _oval(wr+d2*1.6,2.0,1.5,wood.lightened(0.05),d2.angle())
+    # Dedos fechados e um indicador comprido demais, com unha preta pontuda.
+    var curl_side: Vector2 = d2.orthogonal()*side
+    for f in [0.9,1.8,2.6]:
+        var k0: Vector2 = wr+d2*2.4+curl_side*(f-1.6)
+        cv.draw_line(k0,k0+d2*1.6-curl_side*0.6,wood.darkened(0.2),0.9,true)
+    var knuckle: Vector2 = wr+d2*3.0
+    var index_tip: Vector2 = knuckle+d2*(4.0+5.0*raise)
+    cv.draw_line(knuckle,index_tip,wood,1.1,true)
+    cv.draw_circle(knuckle+d2*(2.0+2.5*raise),0.7,joint)
+    cv.draw_line(index_tip,index_tip+d2*(1.5+2.5*raise),Color("0a0508"),1.0,true)
 
 func _blood_trail() -> void:
     # Por onde ela passou fica um rastro escuro, que seca aos poucos.
@@ -321,9 +545,10 @@ func _floor_light() -> void:
     var rays2: Array = [begin]
     var count: int = 28
     var r: float = g.light_range()
+    var phasing: bool = g.spectral_open()
     for n in range(count+1):
         var a: float = g.look.angle()+lerpf(-half,half,float(n)/count)
-        var beam_edge: Vector2 = screen(g.map.ray_end(g.draw_player,a,r))
+        var beam_edge: Vector2 = screen(g.map.ray_end(g.draw_player,a,r,phasing))
         rays.append(beam_edge)
         # Reutiliza as amostras centrais do cone externo. Corta pela metade
         # o numero de testes de colisao por quadro sem deixar a luz atravessar parede.
@@ -376,15 +601,142 @@ func _hide_spot(at: Vector2) -> void:
     _wardrobe(at)
 
 func _portal(at: Vector2) -> void:
+    ## Costura Espectral (E): um rasgo no ar, costurado com linha grossa.
+    ## Na luz espectral aparece inteira, com o circulo de runas no piso.
+    ## Na luz comum, so uma cicatriz costurada no chao denuncia o lugar.
     var p: Vector2 = screen(at)
-    if not g.light_on or not g.ghost_mode:
+    var t: float = g.real_time
+    var seed: float = at.x*0.013+at.y*0.007
+    if not g.spectral_open():
+        if g.is_illuminated(at) or g.draw_player.distance_to(at) < 60.0:
+            _floor_matrix(p,seed*3.0)
+            cv.draw_line(Vector2(-12,0),Vector2(12,0),Color(0.36,0.18,0.58,0.6),1.8)
+            for k in range(6):
+                var sx: float = -10.0+float(k)*4.0
+                cv.draw_line(Vector2(sx-1.4,-3.2),Vector2(sx+1.4,3.2),Color(0.66,0.48,0.90,0.55),0.9)
+            cv.draw_set_transform_matrix(Transform2D.IDENTITY)
         return
-    if not g.is_illuminated(at) and g.player.distance_to(at)>49.0:
+    var near: float = clampf(1.0-g.draw_player.distance_to(at)/110.0,0.0,1.0)
+    var breath: float = 0.5+0.5*sin(t*2.4+seed*10.0)
+    # Circulo de runas no piso, girando devagar.
+    _floor_matrix(p,t*0.5+seed)
+    cv.draw_circle(Vector2.ZERO,18.0,Color(0.45,0.22,0.85,0.20+0.08*breath))
+    cv.draw_arc(Vector2.ZERO,16.0,0,TAU,40,Color(0.82,0.66,1.0,0.8),1.4)
+    cv.draw_arc(Vector2.ZERO,11.0,0,TAU,30,Color(0.82,0.66,1.0,0.45),0.9)
+    for k in range(8):
+        var ra: float = TAU*float(k)/8.0
+        cv.draw_line(Vector2.from_angle(ra)*12.0,Vector2.from_angle(ra+0.22)*15.0,Color(0.92,0.84,1.0,0.75),1.0)
+    cv.draw_set_transform_matrix(Transform2D.IDENTITY)
+    # O rasgo: abre mais quando ela chega perto.
+    var top: Vector2 = p+Vector2(0,-54)
+    var bottom: Vector2 = p+Vector2(0,-6)
+    var w: float = 4.5+2.0*breath+4.0*near
+    cv.draw_circle(p+Vector2(0,-30),22.0+6.0*breath+8.0*near,Color(0.55,0.30,1.0,0.10+0.06*near))
+    var slit: PackedVector2Array = PackedVector2Array([top])
+    for k in range(1,12):
+        var f: float = float(k)/12.0
+        slit.append(top.lerp(bottom,f)+Vector2(sin(f*PI)*(w+sin(f*9.0+t*3.0)*0.7),0))
+    slit.append(bottom)
+    for k in range(11,0,-1):
+        var f2: float = float(k)/12.0
+        slit.append(top.lerp(bottom,f2)-Vector2(sin(f2*PI)*(w+sin(f2*7.0+t*2.6)*0.7),0))
+    cv.draw_colored_polygon(slit,Color(0.06,0.01,0.10,0.92))
+    cv.draw_line(top.lerp(bottom,0.12),top.lerp(bottom,0.88),Color(0.86,0.72,1.0,0.30+0.35*breath),1.4,true)
+    slit.append(slit[0])
+    cv.draw_polyline(slit,Color(0.84,0.70,1.0,0.9),1.3,true)
+    # Pontos de linha grossa atravessando o rasgo, como se alguem o tivesse fechado.
+    for k in range(5):
+        var f3: float = 0.16+0.68*float(k)/4.0
+        var c: Vector2 = top.lerp(bottom,f3)
+        var ww: float = sin(f3*PI)*w+3.0
+        cv.draw_line(c+Vector2(-ww,-2.5),c+Vector2(ww,2.5),Color("e8dcff"),1.0,true)
+    for k in range(5):
+        var oa: float = t*1.3+float(k)*TAU/5.0+seed
+        cv.draw_circle(p+Vector2(cos(oa)*17.0,-28.0+sin(oa)*7.0-sin(t*2.0+float(k))*9.0),1.2,Color(0.92,0.82,1.0,0.75))
+
+func _portal_threads() -> void:
+    ## Na luz espectral, um fio costurado no chao liga as duas pontas de cada
+    ## Costura: passa por baixo da parede e mostra para onde ela leva.
+    if not g.spectral_open():
         return
-    var a: float = 0.72+0.27*sin(g.time_passed*4.0)
-    cv.draw_circle(p+Vector2(0,-17),21,Color(.51,.25,.93,.16*a))
-    cv.draw_arc(p+Vector2(0,-17),18.0,0,TAU,40,Color(.77,.60,1.0,a),3.1)
-    cv.draw_line(p+Vector2(-7,-25),p+Vector2(7,-10),Color("dcc2ff"),2.0)
+    var t: float = g.real_time
+    for portal in g.portals:
+        var a: Vector2 = portal["a"]
+        var b: Vector2 = portal["b"]
+        if g.draw_player.distance_to(a) > 640.0 and g.draw_player.distance_to(b) > 640.0:
+            continue
+        var dist: float = a.distance_to(b)
+        var dir: Vector2 = (b-a)/dist
+        var side: Vector2 = dir.orthogonal()
+        var n: int = int(dist/13.0)
+        for i in range(n):
+            var f0: float = float(i)/float(n)
+            var p0: Vector2 = a+dir*dist*f0
+            var p1: Vector2 = a+dir*dist*((float(i)+0.55)/float(n))
+            var glow: float = 0.5+0.5*sin(f0*14.0-t*4.0)
+            cv.draw_line(screen(p0),screen(p1),Color(0.74,0.52,1.0,0.30+0.35*glow),1.6,true)
+            var m: Vector2 = (p0+p1)*0.5
+            cv.draw_line(screen(m-side*3.5),screen(m+side*3.5),Color(0.88,0.76,1.0,0.25+0.3*glow),1.0,true)
+
+func _spectral_wall(cell: Vector2i) -> void:
+    ## Parede Espectral (dois blocos). Com a luz comum e uma parede igual as
+    ## outras, so com uma costura fina e fumaca roxa vazando pelas frestas.
+    ## Com a luz espectral acesa vira um bloco lilas translucido: da para ver
+    ## atraves dela e atravessa-la andando.
+    var x: int = cell.x
+    var y: int = cell.y
+    var at: Vector2 = g.tile(x,y)
+    var t: float = g.real_time
+    var seed: float = float(x*3+y*7)
+    var H: float = WALL_HEIGHT
+    if not g.spectral_open():
+        bake_wall(x,y)
+        var pulse: float = 0.5+0.5*sin(t*1.6+seed)
+        for side in [0, 1]:
+            var nb: Vector2i = cell+(Vector2i(0,1) if side == 0 else Vector2i(1,0))
+            if g.map.is_spectral_cell(nb.x,nb.y) or _static_wall(nb.x,nb.y):
+                continue   # face escondida pela parede vizinha
+            var seam: PackedVector2Array = PackedVector2Array()
+            for k in range(8):
+                seam.append(_wpt(at,side,0.5+(0.05 if k%2 == 0 else -0.05),2.0+(H-5.0)*float(k)/7.0))
+            cv.draw_polyline(seam,Color(0.05,0.02,0.08,0.8),2.2,true)
+            cv.draw_polyline(seam,Color(0.72,0.48,1.0,0.22+0.3*pulse),0.9,true)
+            for k in range(3):
+                var z: float = 8.0+float(k)*10.0
+                _wl(at,side,0.42,z-2.0,0.58,z+2.0,Color(0.82,0.68,1.0,0.22+0.25*pulse),0.8)
+        var crest: Vector2 = screen(at)+Vector2(0,-H)
+        for k in range(3):
+            var f: float = fposmod(t*0.4+float(k)/3.0+seed*0.07,1.0)
+            cv.draw_circle(crest+Vector2(sin(f*6.0+seed+float(k))*4.0,-f*18.0),1.5+f*4.0,Color(0.55,0.35,0.90,0.22*(1.0-f)))
+        return
+    var shimmer: float = 0.5+0.5*sin(t*3.1+seed)
+    # Brilho lilas no piso por baixo do bloco.
+    poly([_wp(at,-16,-16,0),_wp(at,16,-16,0),_wp(at,16,16,0),_wp(at,-16,16,0)],Color(0.72,0.52,1.0,0.16+0.06*shimmer))
+    var edge: Color = Color(0.94,0.86,1.0,0.55+0.2*shimmer)
+    for side in [0, 1]:
+        var nb2: Vector2i = cell+(Vector2i(0,1) if side == 0 else Vector2i(1,0))
+        if g.map.is_spectral_cell(nb2.x,nb2.y):
+            continue   # face interna do bloco de dois
+        var face: Color = Color(0.80,0.64,1.0,0.28+0.08*shimmer) if side == 0 else Color(0.68,0.52,0.92,0.30+0.08*shimmer)
+        _wq(at,side,0,1,0,H,face)
+        # Faixas de luz subindo pela face, como fumaca presa no vidro.
+        for k in range(3):
+            var z2: float = fposmod(t*9.0+float(k)*H/3.0+seed,H)
+            _wl(at,side,0.03,z2,0.97,z2,Color(0.94,0.86,1.0,0.25*(1.0-z2/H)),1.0)
+        _wl(at,side,0,0,0,H,edge,1.0)
+        _wl(at,side,1,0,1,H,edge,1.0)
+        _wl(at,side,0,0,1,0,Color(edge.r,edge.g,edge.b,edge.a*0.6),1.0)
+    var t0: Vector2 = _wp(at,-16,-16,H)
+    var t1: Vector2 = _wp(at,16,-16,H)
+    var t2: Vector2 = _wp(at,16,16,H)
+    var t3: Vector2 = _wp(at,-16,16,H)
+    poly([t0,t1,t2,t3],Color(0.88,0.78,1.0,0.30+0.10*shimmer))
+    cv.draw_polyline(PackedVector2Array([t0,t1,t2,t3,t0]),edge,1.0,true)
+    # Particulas subindo de dentro do bloco.
+    for k in range(4):
+        var f4: float = fposmod(t*0.5+float(k)*0.25+seed*0.05,1.0)
+        var q: Vector2 = screen(at)+Vector2(sin(f4*7.0+float(k)*2.0+seed)*9.0,-4.0-f4*(H+14.0))
+        cv.draw_circle(q,1.0+0.6*(1.0-f4),Color(0.95,0.88,1.0,0.7*(1.0-f4)))
 
 func _curve(ctrl: Array, steps: int = 6) -> PackedVector2Array:
     ## Contorno fechado e arredondado que passa por todos os pontos de controle.
@@ -947,6 +1299,7 @@ func draw_light_mask(c: CanvasItem) -> void:
         var base: float = g.look.angle()
         var n: int = 30
         var feather: float = 0.11
+        var phasing: bool = g.spectral_open()
         var pts: PackedVector2Array = PackedVector2Array([hero])
         var cols: PackedColorArray = PackedColorArray([Color.WHITE])
         var idx: PackedInt32Array = PackedInt32Array()
@@ -960,7 +1313,7 @@ func draw_light_mask(c: CanvasItem) -> void:
             elif i == rays-1:
                 ang += feather
             var dir: Vector2 = Vector2.from_angle(ang)
-            var hit_at: Vector2 = g.map.ray_end(g.draw_player,ang,r)
+            var hit_at: Vector2 = g.map.ray_end(g.draw_player,ang,r,phasing)
             var d: float = hit_at.distance_to(g.draw_player)
             var blocked: bool = d < r-9.0
             # Anel interno: luz plena. Anel externo: esmaece no fim do alcance,
@@ -988,10 +1341,21 @@ func draw_light_mask(c: CanvasItem) -> void:
     if g.light_active() and not g.monster_banished:
         for h in g.hanged:
             if g.is_illuminated(h["at"]):
-                _blob(c,screen(h["at"])+Vector2(0,-84),40.0,100.0,1.0)
+                _blob(c,screen(h["at"])+Vector2(0,-88),44.0,104.0,1.0)
         for m in g.mannequins:
             if g.is_illuminated(m["at"]):
-                _blob(c,screen(m["at"])+Vector2(0,-40),32.0,46.0,1.0)
+                _blob(c,screen(m["at"])+Vector2(0,-44),42.0,54.0,1.0)
+    # Na luz espectral, Paredes e Costuras Espectrais brilham sozinhas por perto:
+    # da para acha-las mesmo fora do facho.
+    if g.spectral_open():
+        for cell in g.map.spectral:
+            var wc: Vector2 = g.map.cell_center(cell.x,cell.y)
+            if g.draw_player.distance_to(wc) < 620.0:
+                _blob(c,screen(wc)+Vector2(0,-12),42.0,34.0,0.8)
+        for portal in g.portals:
+            for end in [portal["a"],portal["b"]]:
+                if g.draw_player.distance_to(end) < 620.0:
+                    _blob(c,screen(end)+Vector2(0,-26),34.0,40.0,0.75)
     # As velas do altar seguram um resto de luz; o ritual incendeia o circulo.
     if not g.power_on:
         var altar_at: Vector2 = screen(g.tile(26,29))+Vector2(0,-14)
@@ -1053,6 +1417,7 @@ func draw_world() -> void:
     else:
         _floor()
     _decals()
+    _portal_threads()
     _blood_trail()
     _floor_light()
     _shadow_reach()
@@ -1068,7 +1433,7 @@ func draw_world() -> void:
     else:
         for y in range(ManorMap.H):
             for x in range(ManorMap.W):
-                if not g.map.is_wall_cell(x,y):
+                if not g.map.is_wall_cell(x,y) or g.map.is_spectral_cell(x,y):
                     continue
                 var p: Vector2 = screen(g.tile(x,y))
                 if _onscreen(p,90):
@@ -1085,11 +1450,16 @@ func draw_world() -> void:
     for spot in g.hiding_places:
         if _onscreen(screen(spot),90):
             entities.append({"kind":"hide","at":spot,"z":project(spot).y-g.camera.y})
-    if g.light_on and g.ghost_mode:
-        for portal in g.portals:
-            for endpoint in [portal["a"],portal["b"]]:
-                if _onscreen(screen(endpoint),90):
-                    entities.append({"kind":"portal","at":endpoint,"z":project(endpoint).y-g.camera.y})
+    for portal in g.portals:
+        for endpoint in [portal["a"],portal["b"]]:
+            if _onscreen(screen(endpoint),90):
+                entities.append({"kind":"portal","at":endpoint,"z":project(endpoint).y-g.camera.y})
+    # Paredes Espectrais ficam fora do cache: sao desenhadas a cada quadro,
+    # na mesma profundidade das outras paredes.
+    for cell in g.map.spectral:
+        var wc: Vector2 = g.tile(cell.x,cell.y)
+        if _onscreen(screen(wc),90):
+            entities.append({"kind":"spectral","cell":cell,"z":project(wc).y-g.camera.y})
     for bottle in g.thrown_bottles:
         if _onscreen(screen(bottle["at"]),90):
             entities.append({"kind":"bottle","at":bottle["at"],"z":project(bottle["at"]).y-g.camera.y})
@@ -1121,6 +1491,7 @@ func draw_world() -> void:
             "battery": _battery(entity["at"])
             "hide": _hide_spot(entity["at"])
             "portal": _portal(entity["at"])
+            "spectral": _spectral_wall(entity["cell"])
             "bottle": _bottle(entity["at"])
             "monster": _monster()
             "apparition": _afrodite(g.apparition["at"],g.is_illuminated(g.apparition["at"]),false)

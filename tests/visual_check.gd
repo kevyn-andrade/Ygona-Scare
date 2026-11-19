@@ -174,6 +174,33 @@ func _run() -> void:
     game.subliminal = 5.0
     await _shot("26_relampago", 3)
     game.subliminal = 0.0
+    # Paredes Espectrais: parede comum com fumaca roxa na luz normal e bloco
+    # lilas translucido na espectral; Costura do vestibulo com o fio ate o quarto.
+    game.ghost_unlocked = true
+    game.light_on = true
+    game.flashlight_pose = 1.0
+    game.energy = 100.0
+    game.light_jam = 0.0
+    game.ghost_mode = false
+    game.player = game.tile(22, 21)
+    game.previous_player = game.player
+    game.draw_player = game.player
+    game.aim_override = Vector2(-1,0)
+    game.look = Vector2(-1,0)
+    game.camera = game._camera_target()
+    await _closeup("27_parede_espectral_normal", game.tile(18, 21), 10)
+    game.ghost_mode = true
+    await _closeup("28_parede_espectral_lilas", game.tile(18, 21), 6)
+    game.player = game.tile(23, 30)
+    game.previous_player = game.player
+    game.draw_player = game.player
+    game.aim_override = Vector2(-1,-0.2)
+    game.look = game.aim_override.normalized()
+    game.camera = game._camera_target()
+    await _shot("29_costura_espectral", 10)
+    game.ghost_mode = false
+    game.light_on = false
+    game.flashlight_pose = 0.0
     game.house_light = 1.0
     game.player = game.tile(26, 31)
     game.previous_player = game.player

@@ -6,6 +6,21 @@ extends SceneTree
 func _initialize() -> void:
     call_deferred("_run")
 
+func _walk(game: Node2D, keys: Array, frames: int) -> void:
+    ## Segura as teclas e roda o movimento da protagonista quadro a quadro.
+    for key in keys:
+        var down: InputEventKey = InputEventKey.new()
+        down.keycode = key
+        down.pressed = true
+        Input.parse_input_event(down)
+    for i in range(frames):
+        game._update_player(1.0/60.0)
+    for key in keys:
+        var up: InputEventKey = InputEventKey.new()
+        up.keycode = key
+        up.pressed = false
+        Input.parse_input_event(up)
+
 func _run() -> void:
     var level: PackedScene = load("res://scenes/main.tscn")
     if level == null:
@@ -214,6 +229,79 @@ func _run() -> void:
         push_error("Camada de escuridao ausente")
         quit(1)
         return
+    # A lanterna obedece so ao mouse: andar com as setas nao gira o facho.
+    game.status = "playing"
+    game.player = game.tile(26,20)
+    game._update_aim()
+    var aim_before: Vector2 = game.look
+    game.moving = true
+    game.direction = aim_before.orthogonal()
+    for i in range(30):
+        game._update_aim()
+    game.moving = false
+    if game.look.distance_to(aim_before) > 0.001:
+        push_error("A lanterna deveria seguir so o mouse, nao a direcao do passo")
+        quit(1)
+        return
+    # Colisao: ela esbarra no altar em vez de atravessa-lo.
+    Input.use_accumulated_input = false
+    game.in_hiding = false
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    game.ghost_mode = false
+    game.player = game.tile(26,32)
+    _walk(game, [KEY_RIGHT, KEY_UP], 40)
+    if game.player.y < 970.0:
+        push_error("A protagonista atravessou o altar: %s" % game.player)
+        quit(1)
+        return
+    # Paredes Espectrais: fechadas com a luz comum...
+    var hall_side: Vector2 = Vector2(19.6*32.0, 21.0*32.0)
+    game.energy = 100.0
+    game.light_jam = 0.0
+    game.light_on = true
+    game.flashlight_pose = 1.0
+    game.player = hall_side
+    _walk(game, [KEY_LEFT, KEY_UP], 60)
+    if game.player.x < 610.0:
+        push_error("A Parede Espectral deveria bloquear com a luz comum: %s" % game.player)
+        quit(1)
+        return
+    # ...atravessaveis com a luz espectral acesa...
+    game.ghost_mode = true
+    game.player = hall_side
+    _walk(game, [KEY_LEFT, KEY_UP], 60)
+    if game.player.x > 560.0 or game.map.room_name(game.player) != "QUARTO":
+        push_error("A luz espectral deveria abrir a Parede Espectral: %s" % game.player)
+        quit(1)
+        return
+    # ...e, se a luz espectral apagar no meio, ela ainda consegue sair.
+    game.ghost_mode = false
+    game.player = game.tile(18,20)+Vector2(0,10)
+    _walk(game, [KEY_LEFT, KEY_UP], 20)
+    if game.map.touches_spectral(game.player, 9.0):
+        push_error("A protagonista ficou presa dentro da Parede Espectral: %s" % game.player)
+        quit(1)
+        return
+    game.light_on = false
+    game.flashlight_pose = 0.0
+    # Afrodite nunca usa as Paredes Espectrais; espera na boca da passagem.
+    for passage in ManorMap.SPECTRAL_PASSAGES:
+        for cell in passage:
+            if not game.map.is_wall_cell(cell.x, cell.y) or game.map.is_wall_cell(cell.x, cell.y, true):
+                push_error("Celula espectral com estado errado: %s" % cell)
+                quit(1)
+                return
+    var around: Array = game.map.route(game.tile(19,20), game.tile(17,20))
+    if around.is_empty() or around.any(func(c): return game.map.is_spectral_cell(c.x, c.y)):
+        push_error("A rota da entidade passou por uma Parede Espectral")
+        quit(1)
+        return
+    var to_mouth: Array = game.map.route(game.tile(23,20), game.tile(18,20))
+    if to_mouth.is_empty() or to_mouth[-1] != Vector2i(19,20):
+        push_error("A entidade deveria esperar na boca da passagem: %s" % [to_mouth])
+        quit(1)
+        return
     var targets: Array = [Vector2i(10,11),Vector2i(43,8),Vector2i(11,26),Vector2i(44,27),Vector2i(26,29),Vector2i(26,34)]
     for point in targets:
         var destination: Vector2 = game.map.cell_center(point.x,point.y)
@@ -221,5 +309,5 @@ func _run() -> void:
             push_error("Objetivo inacessivel: %s" % point)
             quit(1)
             return
-    print("AFRODITE SCARE: CENA, PROJECAO, CACHE, LANTERNA, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
+    print("AFRODITE SCARE: CENA, PROJECAO, CACHE, LANTERNA, MIRA, COLISAO, PAREDES ESPECTRAIS, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
     quit(0)

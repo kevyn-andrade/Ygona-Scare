@@ -143,11 +143,6 @@ var aim_override: Vector2 = Vector2.ZERO   # testes: mira fixa, ignora o mouse
 # Assombracoes: nada disto mata sozinho, mas tudo foi feito para dar medo.
 var fear_rect: ColorRect
 var jumpscare_rect: ColorRect     # chiado/distorcao por cima de tudo durante o susto
-# Mira: se o mouse fica parado enquanto ela anda (ex.: touchpad bloqueado pelo
-# sistema enquanto se digita), a lanterna passa a seguir a direcao do passo
-# ate o mouse voltar a se mexer.
-var last_mouse: Vector2 = Vector2(-1,-1)
-var aim_by_keys: bool = false
 var apparition: Dictionary = {}   # Afrodite falsa parada no escuro: {"at","seen","ttl"}
 var apparition_timer: float = 20.0
 var subliminal: float = 0.0       # segundos restantes do rosto-relampago
@@ -189,6 +184,9 @@ var monster_banished: bool = false
 
 var scene_objects: Array = []
 var prompt_object: Dictionary = {}
+var solid_bodies: Array = []      # Rect2 (mundo) dos moveis fixos que a protagonista nao atravessa
+var spectral_inside: bool = false # ela esta dentro de uma Parede Espectral
+var spectral_hinted: Dictionary = {}
 
 @onready var music = $Audio
 
@@ -197,6 +195,7 @@ func _ready() -> void:
 	iso_renderer = IsoRenderer.new(self)
 	_setup_layers()
 	_create_objects()
+	_build_solids()
 	_reset_opening()
 	_initial_positions()
 	music.start()
@@ -334,8 +333,10 @@ func _create_objects() -> void:
 		{"at":tile(16, 30),"taken":false}, {"at":tile(39, 30),"taken":false}
 	]
 	hiding_places = [tile(5, 27), tile(14, 29), tile(48, 11), tile(38, 29)]
+	# Costuras Espectrais (E, gastam carga): ligam comodos atraves das paredes
+	# grossas. A ponta do quarto fica acima da cabeceira, fora da cama.
 	portals = [
-		{"a":tile(4, 12), "b":tile(4, 21)},
+		{"a":tile(4, 12), "b":tile(4, 19)},
 		{"a":tile(49, 12), "b":tile(49, 21)},
 		{"a":tile(16, 29), "b":tile(21, 29)}
 	]
@@ -349,7 +350,7 @@ func _create_objects() -> void:
 	hanged = [{"at":tile(22, 12), "idx":0}, {"at":tile(30, 17), "idx":1}, {"at":tile(23, 23), "idx":2}]
 	mannequins = []
 	for cell in [Vector2i(36,19), Vector2i(42,19), Vector2i(49,19), Vector2i(36,31), Vector2i(45,31)]:
-		mannequins.append({"at":tile(cell.x, cell.y), "home":tile(cell.x, cell.y), "moved":false})
+		mannequins.append({"at":tile(cell.x, cell.y), "home":tile(cell.x, cell.y), "moved":false, "raise":0.0})
 	drag_marks = [
 		[tile(22,12)+Vector2(0,10), tile(23,16), tile(25,20)+Vector2(6,0), tile(26,24), tile(26,27), tile(26,29)+Vector2(0,-22)],
 		[tile(30,17)+Vector2(0,10), tile(29,20), tile(27,23)+Vector2(4,0), tile(26,26)+Vector2(8,0), tile(26,29)+Vector2(8,-22)],
@@ -373,6 +374,44 @@ func _create_objects() -> void:
 func tile(x: int, y: int) -> Vector2:
 	return Vector2((float(x) + 0.5) * TILE, (float(y) + 0.5) * TILE)
 
+func _box_at(at: Vector2, half: Vector2) -> Rect2:
+	return Rect2(at - half, half * 2.0)
+
+func _build_solids() -> void:
+	## Pegada (no plano do mundo) de tudo que e solido: a protagonista esbarra
+	## nos moveis em vez de atravessa-los. A entidade continua so com as paredes.
+	solid_bodies = []
+	for obj in iso_renderer.furniture:
+		var half: Vector2 = Vector2(float(obj["w"]), float(obj["d"]))*0.5
+		if obj["kind"] == "altar":
+			half += Vector2(3, 3)       # o plinto e mais largo que o corpo do altar
+		solid_bodies.append(_box_at(obj["at"], half))
+	for spot in hiding_places:
+		solid_bodies.append(_box_at(spot, Vector2(14, 12)))       # guarda-roupas
+	for item in scene_objects:
+		match str(item["kind"]):
+			"book": solid_bodies.append(_box_at(item["at"], Vector2(7, 6)))      # atris
+			"box": solid_bodies.append(_box_at(item["at"], Vector2(12, 9)))      # caixa de musica
+	solid_bodies.append(_box_at(tile(26, 34), Vector2(20, 10)))   # porta da frente
+
+func player_bodies() -> Array:
+	## Solidos para a protagonista neste instante: moveis, manequins e as
+	## penduradas. O que ja a estiver tocando fica de fora, para ela nunca
+	## ficar presa (ex.: um manequim que parou encostado).
+	var bodies: Array = solid_bodies.duplicate()
+	for m in mannequins:
+		bodies.append(_box_at(m["at"], Vector2(8, 6)))
+	if not monster_banished:
+		for h in hanged:
+			bodies.append(_box_at(h["at"], Vector2(6, 6)))
+	var me: Rect2 = _box_at(player, Vector2(9, 9))
+	return bodies.filter(func(r: Rect2) -> bool: return not r.intersects(me))
+
+func spectral_open() -> bool:
+	## Paredes Espectrais ficam atravessaveis (e lilases) enquanto a luz
+	## espectral esta realmente saindo da lanterna.
+	return ghost_mode and light_active() and not in_hiding
+
 func _restart_entirely() -> void:
 	fragment_owned = [false,false,false]
 	library_open = false
@@ -393,6 +432,7 @@ func _restart_entirely() -> void:
 	time_passed = 0.0
 	pulse_phase = 0.0
 	deaths = 0
+	spectral_hinted = {}
 	_reset_opening()
 	_respawn()
 	music.start()
@@ -444,6 +484,8 @@ func _respawn() -> void:
 	for m in mannequins:
 		m["at"] = m["home"]
 		m["moved"] = false
+		m["raise"] = 0.0
+	spectral_inside = false
 	_reset_entity_tricks()
 	if not power_on:
 		monster_dormant = 3.0
@@ -502,7 +544,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			music.sfx("ghost")
 			if ghost_mode:
 				_make_noise(player, 330.0)
-			notify("Modo espectral: procure costuras nas paredes." if ghost_mode else "Modo normal: observe a criatura para imobilizá-la.")
+			notify("Modo espectral: paredes lilases se atravessam andando; costuras roxas levam (E) a outro cômodo. Ela não te segue." if ghost_mode else "Modo normal: observe a criatura para imobilizá-la.", 5.0 if ghost_mode else 3.2)
 	elif key == KEY_SPACE:
 		light_on = not light_on
 		music.sfx("click")
@@ -537,6 +579,7 @@ func _physics_process(delta: float) -> void:
 	# ~0.70 s para tirar/guardar: gesto com inicio, retirada e extensao.
 	flashlight_pose = move_toward(flashlight_pose, 1.0 if light_on else 0.0, delta*1.45)
 	_update_player(delta)
+	_update_spectral()
 	_update_light(delta)
 	_update_objects(delta)
 	_update_opening(delta)
@@ -712,21 +755,12 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _update_aim() -> void:
+	## A lanterna obedece SO ao mouse. As setas movem o corpo e nunca giram o
+	## facho: da para andar para um lado e iluminar o outro.
 	if aim_override != Vector2.ZERO:
 		look = aim_override.normalized()
 		return
-	var mouse_now: Vector2 = get_viewport().get_mouse_position()
-	if last_mouse.x < 0.0 or mouse_now.distance_to(last_mouse) > 1.5:
-		aim_by_keys = false
-		last_mouse = mouse_now
-	elif moving:
-		aim_by_keys = true
-	if aim_by_keys:
-		# Mouse parado: a lanterna gira suavemente para onde ela esta andando.
-		if moving:
-			look = look.slerp(direction, minf(1.0, get_physics_process_delta_time()*9.0)).normalized()
-		return
-	var aim_pos: Vector2 = iso_renderer.unproject(mouse_now + camera)
+	var aim_pos: Vector2 = iso_renderer.unproject(get_viewport().get_mouse_position() + camera)
 	var to_mouse = aim_pos - player
 	if to_mouse.length() > 7.0:
 		look = to_mouse.normalized()
@@ -759,7 +793,10 @@ func _update_player(dt: float) -> void:
 		# visualmente comparaveis nas direcoes vertical e horizontal.
 		motion = Vector2(motion.x + motion.y*2.0, -motion.x + motion.y*2.0)
 		direction = motion.normalized()
-		player = map.slide(player, direction * (PLAYER_RUN if running else PLAYER_WALK) * dt, 9.0)
+		# Ja dentro de uma Parede Espectral, ela sempre consegue sair, mesmo
+		# que a luz espectral apague no meio do caminho.
+		var phasing: bool = spectral_open() or map.touches_spectral(player, 9.0)
+		player = map.slide(player, direction * (PLAYER_RUN if running else PLAYER_WALK) * dt, 9.0, phasing, player_bodies())
 		if running:
 			_make_noise(player, 180.0)
 		footstep_clock += dt
@@ -768,6 +805,31 @@ func _update_player(dt: float) -> void:
 			# SFX discretos e ocasionais, não um som por frame.
 			if randi() % 3 == 0:
 				music.sfx("step")
+
+func _update_spectral() -> void:
+	## Paredes Espectrais: som ao atravessar e um aviso na primeira vez que ela
+	## chega perto de cada uma (a fumaca roxa denuncia a parede "rala").
+	var inside: bool = map.touches_spectral(player, 9.0)
+	if inside and not spectral_inside:
+		music.sfx("ghost", -9.0, 1.3)
+		if not spectral_hinted.has("crossed"):
+			spectral_hinted["crossed"] = true
+			notify("Você atravessa a parede lilás. Afrodite não consegue segui-la por aqui.", 5.0)
+	spectral_inside = inside
+	if spectral_open():
+		return
+	for i in range(ManorMap.SPECTRAL_PASSAGES.size()):
+		var center: Vector2 = map.passage_center(ManorMap.SPECTRAL_PASSAGES[i])
+		if player.distance_to(center) > 64.0:
+			continue
+		var key: String = ("perto_%d" if ghost_unlocked else "fumaca_%d") % i
+		if spectral_hinted.has(key):
+			continue
+		spectral_hinted[key] = true
+		if ghost_unlocked:
+			notify("Fumaça roxa vaza desta parede. Com a luz espectral (F) acesa, dá para atravessá-la andando.", 6.0)
+		else:
+			notify("Uma fumaça roxa escapa pelas frestas desta parede. Ela parece... não estar inteira aqui.", 5.5)
 
 func _update_light(dt: float) -> void:
 	if light_on:
@@ -883,6 +945,10 @@ func _update_haunting(dt: float) -> void:
 	var in_workshop: bool = map.room_name(player) == "OFICINA"
 	for m in mannequins:
 		var away: float = player.distance_to(m["at"])
+		# O braco sobe devagar para apontar quando ela chega perto (ou depois
+		# que o manequim saiu do lugar) e so baixa quando ela vai embora.
+		var point_at: bool = in_workshop and (bool(m["moved"]) or away < 210.0)
+		m["raise"] = move_toward(float(m.get("raise", 0.0)), 1.0 if point_at else 0.0, dt*(1.3 if point_at else 0.6))
 		if not in_workshop:
 			if away > 560.0:
 				m["at"] = m["home"]
@@ -956,7 +1022,8 @@ func is_illuminated(point: Vector2) -> bool:
 		return false
 	if absf(look.angle_to(delta)) > light_half_angle():
 		return false
-	return not map.has_wall_between(player, point)
+	# O facho espectral atravessa as Paredes Espectrais (elas ficam translucidas).
+	return not map.has_wall_between(player, point, spectral_open())
 
 func _make_noise(at: Vector2, radius: float) -> void:
 	if monster_banished or monster_state == "PERSEGUINDO":
@@ -1559,6 +1626,27 @@ func _draw_glows() -> void:
 			draw_circle(head+Vector2(5,0),5.0,Color(1.0,.15,.36,a*0.22))
 			draw_circle(head+Vector2(-5,0),2.0,Color(1.0,.30,.48,a))
 			draw_circle(head+Vector2(5,0),2.0,Color(1.0,.30,.48,a))
+	# Manequins que sairam do lugar: duas brasas miudas no escuro, logo fora do halo.
+	if not in_hiding:
+		for m in mannequins:
+			var md: float = draw_player.distance_to(m["at"])
+			if not bool(m["moved"]) or md > 300.0 or md < CFG.AMBIENT_RADIUS*0.8 or is_illuminated(m["at"]):
+				continue
+			var ma: float = clampf((300.0-md)/140.0,0.0,1.0)*(0.30+0.12*sin(real_time*3.0+float(m["home"].x)))
+			var mh: Vector2 = iso_renderer.screen(m["at"])+Vector2(0,-73)
+			draw_circle(mh+Vector2(-2.6,0),1.1,Color(1.0,.38,.22,ma))
+			draw_circle(mh+Vector2(2.6,0),1.1,Color(1.0,.38,.22,ma))
+	# Paredes e Costuras Espectrais com a luz comum: so um fiapo de fumaca roxa
+	# e um brilho miudo denunciam onde a parede "nao esta inteira".
+	if not spectral_open():
+		for i in range(ManorMap.SPECTRAL_PASSAGES.size()):
+			var center: Vector2 = map.passage_center(ManorMap.SPECTRAL_PASSAGES[i])
+			if draw_player.distance_to(center) < 560.0:
+				_spectral_wisp(iso_renderer.screen(center)+Vector2(0,-IsoRenderer.WALL_HEIGHT-3), float(i)*2.7, 1.0, view)
+		for portal in portals:
+			for end in [portal["a"], portal["b"]]:
+				if draw_player.distance_to(end) < 460.0:
+					_spectral_wisp(iso_renderer.screen(end)+Vector2(0,-9), end.x*0.011+end.y*0.007, 0.65, view)
 	# A aparicao falsa tem os mesmos olhos. Nao da para saber qual e qual.
 	if not apparition.is_empty() and not in_hiding and not is_illuminated(apparition["at"]):
 		var fake: Vector2 = iso_renderer.screen(apparition["at"])+Vector2(0,-85)
@@ -1567,6 +1655,18 @@ func _draw_glows() -> void:
 		draw_circle(fake+Vector2(5,0),5.0,Color(1.0,.15,.36,fa*0.22))
 		draw_circle(fake+Vector2(-5,0),2.0,Color(1.0,.30,.48,fa))
 		draw_circle(fake+Vector2(5,0),2.0,Color(1.0,.30,.48,fa))
+
+func _spectral_wisp(p: Vector2, seed: float, size: float, view: Rect2) -> void:
+	## Indicador discreto (acima da escuridao): brilho roxo miudo e fumaca subindo.
+	if not view.has_point(p):
+		return
+	var beat: float = 0.5+0.5*sin(real_time*1.4+seed)
+	draw_circle(p,(10.0+4.0*beat)*size,Color(0.56,0.30,0.95,0.07+0.06*beat))
+	draw_circle(p,2.4*size+0.7*beat,Color(0.84,0.68,1.0,0.30+0.25*beat))
+	for k in range(4):
+		var f: float = fposmod(real_time*0.32+float(k)*0.25+seed*0.13,1.0)
+		var q: Vector2 = p+Vector2(sin(f*5.0+float(k)*1.7+seed)*5.0*size,-f*32.0*size)
+		draw_circle(q,(1.8+f*5.5)*size,Color(0.62,0.42,0.98,0.20*(1.0-f)*(0.6+0.4*beat)))
 
 func _draw_hiding() -> void:
 	## De dentro do armario so se ve pelas frestas. Se ela estiver perto,

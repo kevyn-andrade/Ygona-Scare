@@ -17,7 +17,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 | Ação | Tecla |
 |---|---|
 | Movimentar na tela isométrica | Setas ↑ ↓ ← → |
-| Apontar lanterna | Mouse |
+| Apontar lanterna | Mouse (só o mouse; as setas nunca giram o facho) |
 | Tirar lanterna do decote / guardar no decote | **Espaço** |
 | Alternar luz normal / sobrenatural (lanterna ligada) | F |
 | Interagir, esconder-se, atravessar Costura Espectral | E |
@@ -27,7 +27,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 | Pausar | Esc |
 | Reaparecer após morte / reiniciar após vitória | R ou Enter |
 
-> **Touchpad parado enquanto anda?** Muitos sistemas (GNOME/Fedora, Windows) bloqueiam o touchpad enquanto uma tecla está pressionada. Quando o mouse fica parado e ela anda, a lanterna passa a seguir a direção do passo; basta mexer o mouse para voltar a mirar com ele. Para desligar o bloqueio no GNOME: `gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false`.
+> **Touchpad parado enquanto anda?** A lanterna segue só o mouse, então dá para andar para um lado e iluminar o outro. Muitos sistemas (GNOME/Fedora, Windows) bloqueiam o touchpad enquanto uma tecla está pressionada; nesse caso, use um mouse ou desligue o bloqueio. No GNOME: `gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false`. No Windows 11: Configurações → Bluetooth e dispositivos → Touchpad → Toques → sensibilidade "Mais sensível".
 
 ### Mudanças da versão original
 
@@ -46,7 +46,12 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 4. **Vestíbulo** — retorne ao altar central, pressione E para devolver os três silicones e sobreviva durante os 15 segundos do ritual.
 5. Alcance a porta principal para ganhar.
 
-As passagens roxas (Costuras Espectrais) podem ser atravessadas com E enquanto a lanterna está em modo espectral. Com a lanterna guardada, a carga se recupera sozinha só até 30%; acima disso, só com pilhas.
+A luz espectral abre dois tipos de passagem que **Afrodite não consegue usar**:
+
+- **Paredes Espectrais** — dois trechos de parede (de dois blocos) que se atravessam andando: **salão ↔ quarto** e **vestíbulo ↔ oficina**. Com a luz normal parecem paredes comuns, com uma costura fina e um fiapo de fumaça roxa; com a luz espectral acesa viram um bloco lilás translúcido.
+- **Costuras Espectrais** — rasgos costurados no ar que levam, com E, para o outro lado de uma parede grossa (biblioteca ↔ quarto, cozinha ↔ oficina, quarto ↔ vestíbulo). Custam 9% de carga.
+
+Com a lanterna guardada, a carga se recupera sozinha só até 30%; acima disso, só com pilhas.
 
 ## Arquivos
 
@@ -191,3 +196,19 @@ A caixinha de música passa por um barramento próprio (`Caixinha`) com efeitos 
 - Um limitador no fim da cadeia impede que a saída estoure.
 
 Se trocar `lullaby.wav` por outra faixa, rode `python3 tools/build_audio.py` só se quiser regenerar a original; para a sua, gere também a versão invertida (no Audacity: Efeitos → Inverter no tempo) e salve como `lullaby_reverse.wav`. `tests/audio_probe.gd` mostra os níveis de cada estágio.
+
+---
+
+## Atualização de controle, colisão e luz espectral — 18/11/2026
+
+| Tema | O que mudou |
+|---|---|
+| Lanterna | A mira segue **só o mouse**. Antes, com o mouse parado, a lanterna girava para a direção do passo, e mouse e setas brigavam pelo facho; agora dá para andar para um lado e iluminar o outro. |
+| Colisão | A protagonista **não atravessa mais os objetos**: mesas, estantes, bancadas, cama, penteadeira, altar, guarda-roupas, atris, caixa de música, porta da frente, manequins e as penduradas. As pegadas ficam em `_build_solids()` (`scripts/game.gd`). A entidade continua passando pelos móveis. A ponta da Costura do quarto saiu de dentro da cama e foi para (4, 19). |
+| Luz espectral | Ganhou poder de verdade: **Paredes Espectrais** (`ManorMap.SPECTRAL_PASSAGES`) em dois trechos de dois blocos, salão ↔ quarto e vestíbulo ↔ oficina. Na luz normal: parede comum, costura fina e fumaça roxa vazando (e um brilho miúdo visível no escuro). Na luz espectral: bloco **lilás translúcido** que se atravessa andando e deixa o facho passar. Afrodite não as usa: espera na boca da passagem. Se a luz falhar no meio da travessia, a protagonista ainda consegue sair. |
+| Indicação das passagens | As Costuras Espectrais aparecem como um rasgo costurado no ar, com um círculo de runas no piso e um fio costurado no chão até a outra ponta. Na luz espectral, passagens próximas brilham sozinhas mesmo fora do facho; na luz normal, uma cicatriz costurada no chão e um fiapo de fumaça roxa denunciam o lugar. Avisos aparecem na primeira vez que ela chega perto de uma Parede Espectral. |
+| As penduradas | Corpo com forma de gente, enrolado num lençol encharcado: pescoço quebrado com a cabeça tombada, rosto cinzento de olhos arregalados aparecendo pelo rasgo (de perto, as pupilas seguem você), boca aberta, cabelo molhado escapando, braço roxo caído com sangue pingando dos dedos, pés arroxeados, poça com respingos e moscas. Sob a luz, convulsionam por instantes. |
+| Manequins | Cabeça de gesso rachada, órbitas fundas com uma brasa vermelha de perto e boca costurada que estica num sorriso; peito aberto em Y e costurado, ainda sangrando; alfinetes espetados, fita métrica no pescoço; um braço quebrado ao contrário e o outro, articulado, que sobe devagar e aponta para você com um dedo comprido de unha preta. Fora do halo, os que saíram do lugar mostram dois olhinhos acesos no escuro. |
+
+- **Cache do cenário:** as células das Paredes Espectrais ficam fora das texturas de parede e são desenhadas a cada quadro. Foram refeitos `floor.png` e as faixas `d37–d39` e `d63–d65`.
+- **Testes:** `smoke_test.gd` cobre a mira só no mouse, a colisão com o altar, a Parede Espectral fechada e aberta, a saída com a luz apagada no meio e a rota da entidade, que nunca passa por elas. `visual_check.gd` grava `27_parede_espectral_normal`, `28_parede_espectral_lilas` e `29_costura_espectral`.

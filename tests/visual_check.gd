@@ -52,6 +52,8 @@ func _run() -> void:
     game._close_reading()
     game.foyer_key_owned = true
     game._open_foyer_door()
+    # Porta aberta, casa ainda acesa (o instante antes do apagao).
+    await _shot("06b_porta_aberta_luz", 10)
     game._trigger_blackout()
     game.blackout_clock = 5.0
     game.house_light = 0.0

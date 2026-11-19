@@ -14,7 +14,7 @@ OUT = ROOT / 'assets' / 'render_cache'
 W, H, TS = 53, 37, 32
 OX, OY = 1210., 65.
 SX, SY = .96, .48
-WALL_HEIGHT = 37
+WALL_HEIGHT = 48   # 30% mais alta (iso_renderer.gd: WALL_HEIGHT)
 rooms = [
     ('BIBLIOTECA', 2,2,16,13,'#253543'),
     ('COZINHA',35,2,16,13,'#26343b'),
@@ -40,9 +40,12 @@ for r in [(17,8,3,4),(33,8,3,4),(17,24,3,4),(33,24,3,4),(23,27,8,3),(9,14,3,5),(
     carve(*r)
 for r in [(6,10,9,False),(46,5,6,True),(6,25,3,True),(47,26,4,False)]:
     wall_line(*r)
-# Parede que fecha o vestibulo; a porta (26,27) e piso e fechada dinamicamente.
-wall_line(19,27,15,True)
+# Parede que fecha o vestibulo, com as quinas (18,27) e (34,27); a porta (26,27)
+# e piso e fechada dinamicamente. Paredes Espectrais (manor_map.gd) sao piso aqui.
+wall_line(18,27,17,True)
 cells[27][26]=0
+for sx,sy in [(18,20),(18,21),(34,30),(34,31)]:
+    cells[sy][sx]=0
 
 def project(p):
     x,y=p

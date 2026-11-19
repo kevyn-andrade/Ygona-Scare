@@ -212,3 +212,17 @@ Se trocar `lullaby.wav` por outra faixa, rode `python3 tools/build_audio.py` só
 
 - **Cache do cenário:** as células das Paredes Espectrais ficam fora das texturas de parede e são desenhadas a cada quadro. Foram refeitos `floor.png` e as faixas `d37–d39` e `d63–d65`.
 - **Testes:** `smoke_test.gd` cobre a mira só no mouse, a colisão com o altar, a Parede Espectral fechada e aberta, a saída com a luz apagada no meio e a rota da entidade, que nunca passa por elas. `visual_check.gd` grava `27_parede_espectral_normal`, `28_parede_espectral_lilas` e `29_costura_espectral`.
+
+---
+
+## Atualização do saguão e das paredes — 19/11/2026
+
+| Tema | O que mudou |
+|---|---|
+| Saguão trancado | Enquanto a porta do salão está trancada, só o vestíbulo (com as paredes em volta) tem a luz da casa; o resto da mansão fica no escuro do jogo, como fora do halo e da lanterna. Ao destrancar a porta, a casa inteira fica acesa por mais **1 segundo** (`BLACKOUT_DELAY` em `scripts/game_config.gd`) antes do apagão, para dar uma espiada no salão. |
+| Paredes | 30% mais altas: `WALL_HEIGHT` foi de 37 para 48 px em `scripts/iso_renderer.gd`. Os acabamentos (lambri, papel de parede, azulejo, tijolo) esticam junto, mantendo a proporção. |
+| Estantes e guarda-roupas | Também 30% mais altos (estantes de 35 para 45,5 px; guarda-roupas de 50 para 65 px). |
+| Quinas do vestíbulo | Os dois cantos da parede de cima do saguão ganharam o bloco que faltava, em (18, 27) e (34, 27). Os corredores do quarto e da oficina para o salão continuam abertos (três blocos de largura). |
+
+- **Cache do cenário:** refeito por inteiro (piso e as 89 faixas de parede), por causa da nova altura e das quinas. `build_render_cache.py` (gerador antigo) acompanha a nova geometria.
+- **Testes:** `smoke_test.gd` confere as quinas, o vestíbulo isolado no escuro e o apagão só depois de `BLACKOUT_DELAY`. `visual_check.gd` grava `06b_porta_aberta_luz`.

@@ -50,9 +50,10 @@ func _init() -> void:
     wall_line(46, 5, 6, true)
     wall_line(6, 25, 3, true)
     wall_line(47, 26, 4, false)
-    # Parede que fecha o vestibulo (quarto inicial trancado). A porta em
-    # FOYER_DOOR e piso no mapa estatico e bloqueada dinamicamente.
-    wall_line(19, 27, 15, true)
+    # Parede que fecha o vestibulo (quarto inicial trancado), com os blocos de
+    # quina (18,27) e (34,27) fechando os cantos. A porta em FOYER_DOOR e piso
+    # no mapa estatico e bloqueada dinamicamente.
+    wall_line(18, 27, 17, true)
     cells[FOYER_DOOR.y][FOYER_DOOR.x] = 0
     for passage in SPECTRAL_PASSAGES:
         for cell in passage:

@@ -81,6 +81,7 @@ const PULSE_HINT_RANGE: float = 1250.0    # ate onde o pulso aparece como brilho
 
 # --------------------------- RITUAL / FLUXO --------------------------------
 const RITUAL_SECONDS: float = 15.0
+const BLACKOUT_DELAY: float = 1.0         # casa acesa depois de abrir a porta do salao, antes do apagao
 const INTRO_ENABLED: bool = true
 const INTRO_SCENES: Array = [5.2, 5.6, 4.6, 3.0]  # duracao de cada quadro da abertura
 const JUMPSCARE_SECONDS: float = 1.25

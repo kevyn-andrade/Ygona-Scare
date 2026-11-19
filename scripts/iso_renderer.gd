@@ -10,7 +10,8 @@ const VIEW_HEIGHT: float = 720.0
 const SKEW_X: float = 0.96
 const SKEW_Y: float = 0.48
 const ORIGIN: Vector2 = Vector2(1210.0, 65.0)
-const WALL_HEIGHT: float = 37.0
+const WALL_BASE: float = 37.0     # altura para a qual os acabamentos das paredes foram desenhados
+const WALL_HEIGHT: float = 48.0   # 30% mais alta; os acabamentos esticam junto (_wall_stretch)
 
 var g
 var cv: CanvasItem   # camada onde o mundo e desenhado (abaixo da escuridao)
@@ -25,10 +26,10 @@ func _init(game: Node2D) -> void:
     g = game
     furniture = [
         {"at":g.tile(10,9),"w":112.0,"d":42.0,"h":21.0,"kind":"table","c":Color("705343")},
-        {"at":g.tile(5,4),"w":49.0,"d":23.0,"h":35.0,"kind":"shelf","c":Color("654b44")},
-        {"at":g.tile(8,4),"w":49.0,"d":23.0,"h":35.0,"kind":"shelf","c":Color("684d44")},
-        {"at":g.tile(11,4),"w":49.0,"d":23.0,"h":35.0,"kind":"shelf","c":Color("654b44")},
-        {"at":g.tile(14,4),"w":49.0,"d":23.0,"h":35.0,"kind":"shelf","c":Color("684d44")},
+        {"at":g.tile(5,4),"w":49.0,"d":23.0,"h":45.5,"kind":"shelf","c":Color("654b44")},
+        {"at":g.tile(8,4),"w":49.0,"d":23.0,"h":45.5,"kind":"shelf","c":Color("684d44")},
+        {"at":g.tile(11,4),"w":49.0,"d":23.0,"h":45.5,"kind":"shelf","c":Color("654b44")},
+        {"at":g.tile(14,4),"w":49.0,"d":23.0,"h":45.5,"kind":"shelf","c":Color("684d44")},
         {"at":g.tile(39,5),"w":105.0,"d":37.0,"h":23.0,"kind":"butcher","c":Color("617076")},
         {"at":g.tile(47,6),"w":66.0,"d":36.0,"h":24.0,"kind":"butcher","c":Color("65747a")},
         {"at":g.tile(39,11),"w":82.0,"d":33.0,"h":22.0,"kind":"table","c":Color("77675d")},
@@ -1287,6 +1288,18 @@ func _blob(c: CanvasItem, center: Vector2, rx: float, ry: float, strength: float
 func draw_light_mask(c: CanvasItem) -> void:
     ## Mascara de luz (branco = visivel). O shader de escuridao le esta textura.
     c.draw_rect(Rect2(0,0,VIEW_WIDTH,VIEW_HEIGHT),Color.BLACK)
+    if g.foyer_sealed():
+        # Porta do salao trancada: so o vestibulo (e as paredes em volta dele)
+        # tem a luz da casa; o resto da mansao fica no escuro do jogo.
+        for room in g.map.rooms:
+            if room["name"] != "VESTÍBULO":
+                continue
+            var x0: float = float(int(room["x"])-1)*TS
+            var y0: float = float(int(room["y"])-1)*TS
+            var x1: float = float(int(room["x"])+int(room["w"])+1)*TS
+            var y1: float = float(int(room["y"])+int(room["h"])+1)*TS
+            var lvl: float = g.foyer_light_level()
+            c.draw_colored_polygon(PackedVector2Array([screen(Vector2(x0,y0)),screen(Vector2(x1,y0)),screen(Vector2(x1,y1)),screen(Vector2(x0,y1))]),Color(lvl,lvl,lvl))
     var hero: Vector2 = screen(g.draw_player)
     var amb: float = g.CFG.AMBIENT_RADIUS
     if g.in_hiding:
@@ -1463,10 +1476,12 @@ func draw_world() -> void:
     for bottle in g.thrown_bottles:
         if _onscreen(screen(bottle["at"]),90):
             entities.append({"kind":"bottle","at":bottle["at"],"z":project(bottle["at"]).y-g.camera.y})
+    # Com a porta do salao trancada, os manequins da oficina nao aparecem por
+    # cima da parede iluminada do vestibulo (eles ficam no escuro de verdade).
     for m in g.mannequins:
-        if _onscreen(screen(m["at"]),90):
+        if _onscreen(screen(m["at"]),90) and not g.foyer_sealed():
             entities.append({"kind":"mannequin","data":m,"z":project(m["at"]).y-g.camera.y})
-    if not g.monster_banished:
+    if not g.monster_banished and not g.foyer_sealed():
         for h in g.hanged:
             if _onscreen(screen(h["at"]),200):
                 entities.append({"kind":"hanged","data":h,"z":project(h["at"]).y-g.camera.y})
@@ -1685,12 +1700,14 @@ func _rugs() -> void:
     _rug(6.5*TS,7.6*TS,14.5*TS,11.6*TS,Color("1f3a30"),Color("142820"),Color("8c7a4a"),false)
 
 # ------------------------------- PAREDES -------------------------------
+var _wall_stretch: float = 1.0   # escala vertical dos acabamentos (so dentro de _wall_face)
+
 func _wpt(at: Vector2, side: int, u: float, z: float) -> Vector2:
     ## Ponto numa face de parede: side 0 = face +y, 1 = face +x;
     ## u vai da esquerda (0) para a direita (1) na tela, z e a altura.
     if side == 0:
-        return _wp(at,-16.0+32.0*u,16.0,z)
-    return _wp(at,16.0,16.0-32.0*u,z)
+        return _wp(at,-16.0+32.0*u,16.0,z*_wall_stretch)
+    return _wp(at,16.0,16.0-32.0*u,z*_wall_stretch)
 
 func _wq(at: Vector2, side: int, u0: float, u1: float, z0: float, z1: float, col: Color) -> void:
     poly([_wpt(at,side,u0,z0),_wpt(at,side,u1,z0),_wpt(at,side,u1,z1),_wpt(at,side,u0,z1)],col)
@@ -1712,7 +1729,10 @@ func bake_wall(x: int, y: int) -> void:
     cv.draw_line(_wp(at,16,16,H),_wp(at,16,-16,H),Color(0.75,0.70,0.68,0.14),1.0,true)
 
 func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
-    var H: float = WALL_HEIGHT
+    # Os acabamentos foram desenhados para WALL_BASE e esticam ate WALL_HEIGHT:
+    # lambri, papel de parede e tijolos mantem a proporcao na parede mais alta.
+    var H: float = WALL_BASE
+    _wall_stretch = WALL_HEIGHT/WALL_BASE
     var k: float = 0.10 if side == 0 else 0.30          # face +x recebe menos luz
     var n: float = _h(float(x*7+side),float(y*3))
     match style:
@@ -1844,6 +1864,7 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
                 r3 += 1
     # Rodape de sombra onde a parede encontra o piso.
     _wq(at,side,0,1,0,1.2,Color(0,0,0,0.35))
+    _wall_stretch = 1.0
 
 # =====================================================================
 # OBJETOS E MOVEIS: cada um com a forma do que e (pernas, gavetas,
@@ -2163,25 +2184,27 @@ func _table_props(obj: Dictionary) -> void:
 
 func _wardrobe(at: Vector2) -> void:
     ## Guarda-roupa de duas portas, com almofadas, puxadores e uma fresta.
+    ## "s" deixa o movel 30% mais alto, acompanhando as paredes.
+    var s: float = 1.3
     _ground_shadow(at,30,26)
     var wood: Color = Color("4b382e")
     for corner in [Vector2(-1,1),Vector2(1,1),Vector2(1,-1)]:
-        _prism(at,corner.x*12-1.5,corner.y*10-1.5,corner.x*12+1.5,corner.y*10+1.5,0,3,wood.darkened(0.3),false)
-    _prism(at,-14,-12,14,12,3,47,wood)
+        _prism(at,corner.x*12-1.5,corner.y*10-1.5,corner.x*12+1.5,corner.y*10+1.5,0,3*s,wood.darkened(0.3),false)
+    _prism(at,-14,-12,14,12,3*s,47*s,wood)
     for side in [0, 1]:
         var x0: float = -13.0+13.0*float(side)
         var x1: float = x0+13.0
-        _qy(at,12.01,x0+1.0,x1-1.0,5,45,wood.darkened(0.08))
-        _qy(at,12.02,x0+2.6,x1-2.6,26,42,wood.darkened(0.28))
-        _qy(at,12.02,x0+2.6,x1-2.6,8,23,wood.darkened(0.28))
-        cv.draw_line(_wp(at,x0+2.6,12,42),_wp(at,x1-2.6,12,42),wood.lightened(0.15),0.7)
-    cv.draw_line(_wp(at,0,12,5),_wp(at,0,12,45),Color(0,0,0,0.85),1.4)
+        _qy(at,12.01,x0+1.0,x1-1.0,5*s,45*s,wood.darkened(0.08))
+        _qy(at,12.02,x0+2.6,x1-2.6,26*s,42*s,wood.darkened(0.28))
+        _qy(at,12.02,x0+2.6,x1-2.6,8*s,23*s,wood.darkened(0.28))
+        cv.draw_line(_wp(at,x0+2.6,12,42*s),_wp(at,x1-2.6,12,42*s),wood.lightened(0.15),0.7)
+    cv.draw_line(_wp(at,0,12,5*s),_wp(at,0,12,45*s),Color(0,0,0,0.85),1.4)
     for kx in [-2.2, 2.2]:
-        cv.draw_circle(_wp(at,kx,12,25),1.2,Color("c9a15d"))
-    _prism(at,-15.5,-13,15.5,13.5,47,50,wood.lightened(0.06))
+        cv.draw_circle(_wp(at,kx,12,25*s),1.2,Color("c9a15d"))
+    _prism(at,-15.5,-13,15.5,13.5,47*s,50*s,wood.lightened(0.06))
     var eye: float = 0.5+0.5*sin(g.real_time*0.6)
     if eye > 0.93:
-        cv.draw_circle(_wp(at,0.6,12,33),0.8,Color(0.9,0.2,0.3,0.8))
+        cv.draw_circle(_wp(at,0.6,12,33*s),0.8,Color(0.9,0.2,0.3,0.8))
 
 func _battery(at: Vector2) -> void:
     ## Pilha grande deitada no chao: corpo verde, polo de cobre e rotulo.

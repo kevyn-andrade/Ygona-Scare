@@ -89,6 +89,37 @@ func _run() -> void:
             push_error("Objeto da abertura inacessivel: %s" % point)
             quit(1)
             return
+    # Quinas do vestibulo fechadas.
+    if not game.map.is_wall_cell(18,27) or not game.map.is_wall_cell(34,27):
+        push_error("Faltam os blocos de quina do vestibulo")
+        quit(1)
+        return
+    # Com a porta trancada so o vestibulo tem luz; o resto da casa fica escuro.
+    if not game.foyer_sealed() or game.foyer_light_level() <= 0.05 or game.foyer_light_level() >= 0.6:
+        push_error("O vestibulo deveria comecar isolado no escuro (nivel %s)" % game.foyer_light_level())
+        quit(1)
+        return
+    # Abrir a porta com a chave: a casa fica acesa mais um instante e so entao apaga.
+    game.foyer_key_owned = true
+    game.player = game.tile(26,28)+Vector2(0,-6)
+    game._interact()
+    if not game.foyer_door_open or not game.power_on or game.foyer_sealed():
+        push_error("Abrir a porta deveria acender a casa por um instante antes do apagao")
+        quit(1)
+        return
+    for i in range(int(game.CFG.BLACKOUT_DELAY*60.0)-6):
+        game._update_opening(1.0/60.0)
+    if not game.power_on:
+        push_error("O apagao veio antes de BLACKOUT_DELAY")
+        quit(1)
+        return
+    for i in range(12):
+        game._update_opening(1.0/60.0)
+    if game.power_on:
+        push_error("O apagao deveria vir logo depois de BLACKOUT_DELAY")
+        quit(1)
+        return
+    game.player = origin
     game._open_foyer_door()
     game._trigger_blackout()
     for i in range(int((game.CFG.WAKE_DELAY+2.5)*60.0)):

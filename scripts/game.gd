@@ -95,6 +95,7 @@ var reading: Dictionary = {}  # carta/bilhete aberto na tela
 var power_on: bool = true
 var house_light: float = 1.0
 var blackout_clock: float = 0.0
+var blackout_delay: float = -1.0  # >= 0: porta aberta, a luz ainda segura por este tempo
 var monster_dormant: float = 0.0
 var letter_read: bool = false
 var note_read: bool = false
@@ -265,6 +266,7 @@ func _reset_opening() -> void:
 	power_on = true
 	house_light = 1.0
 	blackout_clock = 0.0
+	blackout_delay = -1.0
 	monster_dormant = 0.0
 	letter_read = false
 	note_read = false
@@ -594,6 +596,18 @@ func _physics_process(delta: float) -> void:
 	prompt_object = _nearest_interaction()
 	music.update_audio(delta, collected_count(), player.distance_to(monster), monster_present())
 
+func foyer_sealed() -> bool:
+	## Antes de destrancar a porta do salao so o vestibulo tem luz: o resto da
+	## casa fica no escuro, como fora do halo e da lanterna durante o jogo.
+	return power_on and not foyer_door_open
+
+func foyer_light_level() -> float:
+	## Valor da mascara de luz que deixa o vestibulo com o mesmo escuro
+	## residual (HOUSE_LIGHT_DARKNESS) que ele tinha com a casa toda acesa.
+	## O shader faz alfa = DARKNESS*(1 - smoothstep(0, 0.6, m)); aqui inverte.
+	var lit: float = clampf(1.0 - CFG.HOUSE_LIGHT_DARKNESS/CFG.DARKNESS, 0.0, 1.0)
+	return 0.6*(0.5 - sin(asin(1.0 - 2.0*lit)/3.0))
+
 func monster_present() -> bool:
 	# A entidade so entra em cena depois que a luz da casa acaba.
 	return not monster_banished and not power_on and monster_dormant <= 0.0
@@ -623,6 +637,11 @@ func _update_opening(dt: float) -> void:
 	if power_on:
 		house_light = 1.0
 		_update_vultos(dt)
+		if blackout_delay >= 0.0:
+			# Porta aberta: a casa fica acesa mais um instante antes do apagao.
+			blackout_delay -= dt
+			if blackout_delay < 0.0:
+				_trigger_blackout()
 		return
 	vultos = []
 	if blackout_clock < 1.7:
@@ -724,7 +743,9 @@ func _process(delta: float) -> void:
 			_begin_play()
 	elif status == "dead":
 		death_time += delta
-	darkness_rect.material.set_shader_parameter("darkness", lerpf(CFG.DARKNESS, CFG.HOUSE_LIGHT_DARKNESS, clampf(house_light,0.0,1.0)))
+	# Com a porta do salao trancada, so o vestibulo tem luz (ver draw_light_mask).
+	var darkness: float = CFG.DARKNESS if foyer_sealed() else lerpf(CFG.DARKNESS, CFG.HOUSE_LIGHT_DARKNESS, clampf(house_light,0.0,1.0))
+	darkness_rect.material.set_shader_parameter("darkness", darkness)
 	world_layer.queue_redraw()
 	mask_layer.queue_redraw()
 	if status == "playing":
@@ -1280,7 +1301,11 @@ func _interact() -> void:
 		else:
 			_open_foyer_door()
 			music.sfx("click", -4.0, 0.8)
-			_trigger_blackout()
+			# A luz ainda segura um instante: da para espiar o salao antes do apagao.
+			if CFG.BLACKOUT_DELAY > 0.0:
+				blackout_delay = CFG.BLACKOUT_DELAY
+			else:
+				_trigger_blackout()
 		return
 	if kind == "lens":
 		ghost_unlocked = true
@@ -1434,6 +1459,8 @@ func _objective() -> String:
 	if collected_count() == 3:
 		return "Tire os 3 silicones do decote e devolva-os ao ALTAR do vestíbulo."
 	if power_on:
+		if foyer_door_open:
+			return "A porta do salão se abriu."
 		if not letter_read:
 			return "Há uma carta sobre a mesa."
 		if not foyer_key_owned:

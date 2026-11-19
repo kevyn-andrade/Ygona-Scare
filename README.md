@@ -226,3 +226,16 @@ Se trocar `lullaby.wav` por outra faixa, rode `python3 tools/build_audio.py` só
 
 - **Cache do cenário:** refeito por inteiro (piso e as 89 faixas de parede), por causa da nova altura e das quinas. `build_render_cache.py` (gerador antigo) acompanha a nova geometria.
 - **Testes:** `smoke_test.gd` confere as quinas, o vestíbulo isolado no escuro e o apagão só depois de `BLACKOUT_DELAY`. `visual_check.gd` grava `06b_porta_aberta_luz`.
+
+---
+
+## Atualização do saguão e do fim do ritual — 19/11/2026 (parte 2)
+
+| Tema | O que mudou |
+|---|---|
+| Porta do salão | A porta do vestíbulo para o resto da casa agora ocupa a altura do bloco inteiro (almofadas, maçaneta e fechadura acompanham). Ao abrir com a chave, ela **range** (`creak.wav`, mais alto e grave) logo depois do clique da fechadura. |
+| Altar | Afastado um bloco da porta do salão: de (26, 29) para (26, 30) (`ALTAR_CELL` em `scripts/game.gd`). O círculo do ritual, as marcas de arrasto e as mãos de sangue foram junto. |
+| Fim do ritual | Quando as três levam Afrodite, ela dá um **grito curto de dor** (`assets/audio/shriek.wav`), a câmera treme e o sino de vitória toca quando o grito se apaga. Todos os cômodos clareiam um tom aos poucos (`BANISHED_DARKNESS` = 0,80 e `BANISHED_FADE` = 2,5 s em `scripts/game_config.gd`). |
+
+- **Áudio novo:** `shriek.wav` é sintetizado em GDScript por `tools/build_shriek.gd` (`godot --headless --path . --script res://tools/build_shriek.gd`, depois `--import`). Para usar outro grito, substitua o arquivo mantendo o nome.
+- **Testes:** `smoke_test.gd` confere o rangido da porta, o altar afastado, o grito e o sino no fim do ritual e o clareamento. `visual_check.gd` grava `30_casa_clareada`.

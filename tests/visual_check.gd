@@ -214,6 +214,12 @@ func _run() -> void:
     game.house_light = 0.0
     await _shot("17_ritual", 5)
     game.ritual_running = false
+    # Depois do ritual a casa clareia um tom.
+    game.monster_banished = true
+    game.dawn = 1.0
+    await _shot("30_casa_clareada", 6)
+    game.monster_banished = false
+    game.dawn = 0.0
     game.set_physics_process(true)
     game._die()
     game.death_time = 0.45

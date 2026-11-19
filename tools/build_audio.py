@@ -4,7 +4,8 @@
 Python puro, sem dependencias:  python tools/build_audio.py
 Os arquivos sao gravados em assets/audio/. Para trocar por audios proprios
 (ex.: a voz/meme da entidade no game over), basta substituir os .wav
-mantendo os mesmos nomes.
+mantendo os mesmos nomes. O grito de dor do fim do ritual (shriek.wav) e
+gerado por tools/build_shriek.gd, em GDScript.
 """
 import math, random, struct, wave
 from pathlib import Path

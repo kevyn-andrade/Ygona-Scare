@@ -14,6 +14,8 @@ const TILE: int = 32
 const PLAYER_WALK: float = 154.0
 const PLAYER_RUN: float = 240.0
 const CFG = preload("res://scripts/game_config.gd")
+## Altar do ritual, no vestibulo: um bloco afastado da porta do salao (26,27).
+const ALTAR_CELL: Vector2i = Vector2i(26, 30)
 const DrawLayer = preload("res://scripts/draw_layer.gd")
 
 ## As tres mulheres que a seita sacrificou a Afrodite (personagens ficticias).
@@ -182,6 +184,8 @@ var thrown_bottles: Array = []
 var ritual_running: bool = false
 var ritual_left: float = 15.0
 var monster_banished: bool = false
+var win_chime: float = 0.0        # > 0: o sino de vitoria toca quando o grito dela acabar
+var dawn: float = 0.0             # 0..1: a casa clareia depois que o ritual a leva
 
 var scene_objects: Array = []
 var prompt_object: Dictionary = {}
@@ -318,7 +322,7 @@ func _create_objects() -> void:
 		{"id":"seal3", "kind":"seal", "label":"Selo III", "at":tile(48, 23), "number":3},
 		{"id":"mirror_clue", "kind":"clue", "label":"Escrita de outro mundo", "at":tile(44, 29)},
 		{"id":"fragment3", "kind":"fragment", "label":"Pegar o silicone de Soraia", "at":tile(44, 27), "idx":2},
-		{"id":"altar", "kind":"altar", "label":"Altar de Afrodite", "at":tile(26, 29)},
+		{"id":"altar", "kind":"altar", "label":"Altar de Afrodite", "at":altar_at()},
 		{"id":"exit", "kind":"exit", "label":"Porta da frente", "at":tile(26, 34)},
 		# Abertura (GDD 2.3 / 3.7): carta da maldicao, bilhete, vaso com a chave, porta.
 		{"id":"letter", "kind":"letter", "label":"Ler a carta", "at":tile(22, 32)+Vector2(7,7)},
@@ -354,14 +358,14 @@ func _create_objects() -> void:
 	for cell in [Vector2i(36,19), Vector2i(42,19), Vector2i(49,19), Vector2i(36,31), Vector2i(45,31)]:
 		mannequins.append({"at":tile(cell.x, cell.y), "home":tile(cell.x, cell.y), "moved":false, "raise":0.0})
 	drag_marks = [
-		[tile(22,12)+Vector2(0,10), tile(23,16), tile(25,20)+Vector2(6,0), tile(26,24), tile(26,27), tile(26,29)+Vector2(0,-22)],
-		[tile(30,17)+Vector2(0,10), tile(29,20), tile(27,23)+Vector2(4,0), tile(26,26)+Vector2(8,0), tile(26,29)+Vector2(8,-22)],
+		[tile(22,12)+Vector2(0,10), tile(23,16), tile(25,20)+Vector2(6,0), tile(26,24), tile(26,27), altar_at()+Vector2(0,-22)],
+		[tile(30,17)+Vector2(0,10), tile(29,20), tile(27,23)+Vector2(4,0), tile(26,26)+Vector2(8,0), altar_at()+Vector2(8,-22)],
 		[tile(11,26), tile(15,26), tile(18,25)+Vector2(0,8), tile(21,25), tile(24,26)]
 	]
 	handprints = [
 		{"at":tile(24,21), "rot":2.6}, {"at":tile(25,22)+Vector2(9,0), "rot":2.9}, {"at":tile(27,25), "rot":-2.7},
-		{"at":tile(28,18), "rot":2.2}, {"at":tile(20,26), "rot":1.5}, {"at":tile(26,30)+Vector2(-14,0), "rot":0.4},
-		{"at":tile(26,30)+Vector2(13,2), "rot":-0.5}, {"at":tile(13,24), "rot":1.2}, {"at":tile(40,25), "rot":-1.9},
+		{"at":tile(28,18), "rot":2.2}, {"at":tile(20,26), "rot":1.5}, {"at":altar_at()+Vector2(-14,32), "rot":0.4},
+		{"at":altar_at()+Vector2(13,34), "rot":-0.5}, {"at":tile(13,24), "rot":1.2}, {"at":tile(40,25), "rot":-1.9},
 		{"at":tile(8,12), "rot":0.9}, {"at":tile(43,10), "rot":2.0}
 	]
 	floor_writings = [
@@ -375,6 +379,9 @@ func _create_objects() -> void:
 
 func tile(x: int, y: int) -> Vector2:
 	return Vector2((float(x) + 0.5) * TILE, (float(y) + 0.5) * TILE)
+
+func altar_at() -> Vector2:
+	return tile(ALTAR_CELL.x, ALTAR_CELL.y)
 
 func _box_at(at: Vector2, half: Vector2) -> Rect2:
 	return Rect2(at - half, half * 2.0)
@@ -428,6 +435,8 @@ func _restart_entirely() -> void:
 	thrown_bottles = []
 	ritual_running = false
 	monster_banished = false
+	win_chime = 0.0
+	dawn = 0.0
 	ritual_left = CFG.RITUAL_SECONDS
 	for bat in batteries:
 		bat["taken"] = false
@@ -745,6 +754,9 @@ func _process(delta: float) -> void:
 		death_time += delta
 	# Com a porta do salao trancada, so o vestibulo tem luz (ver draw_light_mask).
 	var darkness: float = CFG.DARKNESS if foyer_sealed() else lerpf(CFG.DARKNESS, CFG.HOUSE_LIGHT_DARKNESS, clampf(house_light,0.0,1.0))
+	# Depois do ritual, todos os comodos clareiam um tom, aos poucos.
+	dawn = move_toward(dawn, 1.0 if monster_banished else 0.0, delta/maxf(0.01, CFG.BANISHED_FADE))
+	darkness = lerpf(darkness, minf(darkness, CFG.BANISHED_DARKNESS), smoothstep(0.0, 1.0, dawn))
 	darkness_rect.material.set_shader_parameter("darkness", darkness)
 	world_layer.queue_redraw()
 	mask_layer.queue_redraw()
@@ -1159,6 +1171,10 @@ func collected_count() -> int:
 	return count
 
 func _update_ritual(dt: float) -> void:
+	if win_chime > 0.0:
+		win_chime -= dt
+		if win_chime <= 0.0:
+			music.sfx("win")
 	if not ritual_running:
 		return
 	ritual_left = maxf(0.0, ritual_left - dt)
@@ -1168,7 +1184,11 @@ func _update_ritual(dt: float) -> void:
 		ritual_running = false
 		monster_banished = true
 		monster_active = false
-		music.sfx("win")
+		# Ela grita de dor enquanto e arrastada de volta; o sino de vitoria
+		# vem logo depois, quando o grito se apaga.
+		music.sfx("shriek", -2.0, randf_range(0.97, 1.03))
+		win_chime = 1.2
+		shake = 0.45
 		notify("ELAS LEVARAM AFRODITE DE VOLTA AO MAR. A PORTA ESTÁ ABERTA!", 8.0)
 		scare_flash = 0.5
 
@@ -1301,6 +1321,7 @@ func _interact() -> void:
 		else:
 			_open_foyer_door()
 			music.sfx("click", -4.0, 0.8)
+			music.sfx("creak", -2.0, 0.82)    # a porta pesada rangendo ao abrir
 			# A luz ainda segura um instante: da para espiar o salao antes do apagao.
 			if CFG.BLACKOUT_DELAY > 0.0:
 				blackout_delay = CFG.BLACKOUT_DELAY

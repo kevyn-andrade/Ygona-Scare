@@ -6,6 +6,12 @@ extends SceneTree
 func _initialize() -> void:
     call_deferred("_run")
 
+func _last_sfx(game: Node2D) -> String:
+    ## Caminho do ultimo efeito disparado pelo diretor de audio.
+    var pool: Array = game.music.effects
+    var fx: AudioStreamPlayer = pool[(game.music.next_effect - 1 + pool.size()) % pool.size()]
+    return fx.stream.resource_path if fx.stream != null else ""
+
 func _walk(game: Node2D, keys: Array, frames: int) -> void:
     ## Segura as teclas e roda o movimento da protagonista quadro a quadro.
     for key in keys:
@@ -105,6 +111,15 @@ func _run() -> void:
     game._interact()
     if not game.foyer_door_open or not game.power_on or game.foyer_sealed():
         push_error("Abrir a porta deveria acender a casa por um instante antes do apagao")
+        quit(1)
+        return
+    if not _last_sfx(game).ends_with("creak.wav"):
+        push_error("A porta do saguao deveria ranger ao abrir (tocou %s)" % _last_sfx(game))
+        quit(1)
+        return
+    # O altar fica afastado da porta do salao.
+    if game.altar_at().y - game.tile(26,27).y < 96.0:
+        push_error("O altar esta colado na porta do salao")
         quit(1)
         return
     for i in range(int(game.CFG.BLACKOUT_DELAY*60.0)-6):
@@ -333,7 +348,31 @@ func _run() -> void:
         push_error("A entidade deveria esperar na boca da passagem: %s" % [to_mouth])
         quit(1)
         return
-    var targets: Array = [Vector2i(10,11),Vector2i(43,8),Vector2i(11,26),Vector2i(44,27),Vector2i(26,29),Vector2i(26,34)]
+    # Fim do ritual: ela grita de dor, o sino de vitoria vem depois e a casa clareia.
+    game.status = "playing"
+    game.ritual_running = true
+    game.ritual_left = 0.05
+    game._update_ritual(0.1)
+    if not game.monster_banished or not _last_sfx(game).ends_with("shriek.wav"):
+        push_error("O fim do ritual deveria tocar o grito de Afrodite (tocou %s)" % _last_sfx(game))
+        quit(1)
+        return
+    for i in range(int(1.4*60.0)):
+        game._update_ritual(1.0/60.0)
+    if not _last_sfx(game).ends_with("win.wav"):
+        push_error("O sino de vitoria deveria tocar depois do grito (tocou %s)" % _last_sfx(game))
+        quit(1)
+        return
+    for i in range(int((game.CFG.BANISHED_FADE+0.5)*60.0)):
+        game._process(1.0/60.0)
+    var lit_dark: float = game.darkness_rect.material.get_shader_parameter("darkness")
+    if absf(lit_dark - game.CFG.BANISHED_DARKNESS) > 0.01:
+        push_error("A casa deveria clarear depois do ritual (escuro %s)" % lit_dark)
+        quit(1)
+        return
+    game.monster_banished = false
+    game.dawn = 0.0
+    var targets: Array = [Vector2i(10,11),Vector2i(43,8),Vector2i(11,26),Vector2i(44,27),game.ALTAR_CELL,Vector2i(26,34)]
     for point in targets:
         var destination: Vector2 = game.map.cell_center(point.x,point.y)
         if game.map.route(origin,destination).is_empty():

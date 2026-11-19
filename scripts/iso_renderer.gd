@@ -39,7 +39,7 @@ func _init(game: Node2D) -> void:
         {"at":g.tile(38,27),"w":73.0,"d":36.0,"h":24.0,"kind":"table","c":Color("6c6772")},
         {"at":g.tile(49,29),"w":55.0,"d":48.0,"h":37.0,"kind":"table","c":Color("545965")},
         {"at":g.tile(44,27),"w":53.0,"d":20.0,"h":45.0,"kind":"mirror","c":Color("7b5f6f")},
-        {"at":g.tile(26,29),"w":62.0,"d":36.0,"h":31.0,"kind":"altar","c":Color("876c66")},
+        {"at":g.altar_at(),"w":62.0,"d":36.0,"h":31.0,"kind":"altar","c":Color("876c66")},
         # Vestibulo (quarto inicial): mesa da carta e aparador do vaso.
         {"at":g.tile(22,32),"w":44.0,"d":34.0,"h":19.0,"kind":"table","c":Color("6b4f47")},
         {"at":g.tile(32,33),"w":34.0,"d":34.0,"h":15.0,"kind":"table","c":Color("5d4650")}
@@ -150,7 +150,7 @@ func _cached_floor_details() -> void:
     _ritual_circle()
 
 func _ritual_circle() -> void:
-    var altar_pt: Vector2 = screen(g.tile(26,29))
+    var altar_pt: Vector2 = screen(g.altar_at())
     if not _onscreen(altar_pt):
         return
     var glow: float = float(g.collected_count())/3.0
@@ -1371,11 +1371,11 @@ func draw_light_mask(c: CanvasItem) -> void:
                     _blob(c,screen(end)+Vector2(0,-26),34.0,40.0,0.75)
     # As velas do altar seguram um resto de luz; o ritual incendeia o circulo.
     if not g.power_on:
-        var altar_at: Vector2 = screen(g.tile(26,29))+Vector2(0,-14)
+        var altar_glow: Vector2 = screen(g.altar_at())+Vector2(0,-14)
         if g.ritual_running:
-            _blob(c,altar_at,150.0,100.0,0.95)
+            _blob(c,altar_glow,150.0,100.0,0.95)
         else:
-            _blob(c,altar_at,74.0,50.0,0.30+0.05*sin(g.real_time*7.0))
+            _blob(c,altar_glow,74.0,50.0,0.30+0.05*sin(g.real_time*7.0))
     # Fragmentos pulsam e clareiam o entorno por um instante, mesmo no escuro.
     for item in g.scene_objects:
         var kind: String = item["kind"]
@@ -1404,7 +1404,7 @@ func _clues_and_ritual() -> void:
             if g.is_illuminated(w["at"]):
                 _text(screen(w["at"])+Vector2(-float(str(w["text"]).length())*3.6,-8),str(w["text"]),13,Color(.78,.20,.34,.92))
     if g.ritual_running:
-        var p: Vector2 = screen(g.tile(26,29))
+        var p: Vector2 = screen(g.altar_at())
         for i in range(9):
             var ang: float = TAU*float(i)/9.0 + g.time_passed*1.7
             cv.draw_circle(p+Vector2(cos(ang)*44.0,sin(ang)*20.0-22),3.0,Color("eeb3d9"))
@@ -2435,17 +2435,21 @@ func _vase(vp: Vector2) -> void:
 
 func _foyer_door(at: Vector2) -> void:
     ## Porta do vestibulo para o salao: batente, almofadas, macaneta e fechadura.
+    ## Ocupa a altura do bloco inteiro; "k" estica as almofadas e a fechadura
+    ## na mesma proporcao da porta original (33 px).
     bake_wall(int(at.x/TS),int(at.y/TS))
     var wood: Color = Color("5a3b2c")
-    _qy(at,16.02,-13,13,0,35,Color("2a1d17"))
-    _qy(at,16.03,-11,11,0,33,wood)
+    var top: float = WALL_HEIGHT
+    var k: float = (top-2.0)/33.0
+    _qy(at,16.02,-13,13,0,top,Color("2a1d17"))
+    _qy(at,16.03,-11,11,0,top-2.0,wood)
     for pz in [[4.0,15.0],[18.0,30.0]]:
-        _qy(at,16.04,-8.5,-1.5,pz[0],pz[1],wood.darkened(0.25))
-        _qy(at,16.04,1.5,8.5,pz[0],pz[1],wood.darkened(0.25))
+        _qy(at,16.04,-8.5,-1.5,pz[0]*k,pz[1]*k,wood.darkened(0.25))
+        _qy(at,16.04,1.5,8.5,pz[0]*k,pz[1]*k,wood.darkened(0.25))
     var glint: bool = g.foyer_key_owned
-    var knob: Vector2 = _wp(at,7.5,16.05,17)
+    var knob: Vector2 = _wp(at,7.5,16.05,17*k)
     cv.draw_circle(knob,1.8,Color("e1bc79") if glint else Color("8d7a5c"))
-    _qy(at,16.05,6.6,8.4,12.5,15.5,Color("2a2018"))
+    _qy(at,16.05,6.6,8.4,12.5*k,15.5*k,Color("2a2018"))
     if glint:
         cv.draw_circle(knob,5.0+sin(g.real_time*4.0),Color(1,0.85,0.5,0.15))
 

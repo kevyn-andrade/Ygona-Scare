@@ -205,6 +205,7 @@ var spectral_hinted: Dictionary = {}
 @onready var music = $Audio
 
 func _ready() -> void:
+	_install_symbol_fallback()
 	map = ManorMap.new()
 	iso_renderer = IsoRenderer.new(self)
 	_setup_layers()
@@ -215,6 +216,18 @@ func _ready() -> void:
 	_load_settings()
 	music.start()
 	queue_redraw()
+
+# A fonte padrao do Godot nao tem setas (↑ ↓ ← →). No desktop o motor as busca
+# nas fontes do sistema; na Web nao existe esse recurso e elas viram quadrados.
+# Um recorte da DejaVu Sans Bold (so setas e alguns simbolos) entra como reserva.
+func _install_symbol_fallback() -> void:
+	var symbols: Font = load("res://assets/fonts/arrows_dejavu_bold.ttf") as Font
+	if symbols == null or ThemeDB.fallback_font is FontVariation:
+		return
+	var font := FontVariation.new()
+	font.base_font = ThemeDB.fallback_font
+	font.fallbacks = [symbols]
+	ThemeDB.fallback_font = font
 
 func _setup_layers() -> void:
 	# Ordem de desenho: Mundo -> Escuridao -> (este no) brilhos, HUD e telas.
@@ -1761,7 +1774,7 @@ func _draw_pause_menu() -> void:
 			var bar: Rect2 = _volume_bar_rect()
 			_draw_bar(bar.position,bar.size.x,bar.size.y,master_volume,Color("c9a0d6") if chosen else Color("8a7a96"))
 			var knob: Vector2 = Vector2(bar.position.x+bar.size.x*master_volume,bar.get_center().y)
-			draw_circle(knob,7.0 if chosen else 5.5,Color("fff2e5") if chosen else Color("bdb4c6"))
+			iso_renderer.disc(self,knob,7.0 if chosen else 5.5,Color("fff2e5") if chosen else Color("bdb4c6"))
 			var pct: String = "MUDO" if master_volume <= 0.001 else "%d%%" % int(round(master_volume*100.0))
 			_world_txt(Vector2(bar.end.x+14.0,r.position.y+32.0),pct,15,text_col)
 		else:
@@ -1820,24 +1833,24 @@ func _draw_glows() -> void:
 		var at: Vector2 = item["at"]
 		var p: Vector2 = iso_renderer.screen(at)+Vector2(0,-22)
 		if view.has_point(p):
-			draw_circle(p,12.0+30.0*v,Color(1.0,.62,.74,.10*v))
-			draw_circle(p,6.0+10.0*v,Color(1.0,.76,.84,.26*v))
+			iso_renderer.disc(self,p,12.0+30.0*v,Color(1.0,.62,.74,.10*v))
+			iso_renderer.disc(self,p,6.0+10.0*v,Color(1.0,.76,.84,.26*v))
 		elif player.distance_to(at) < CFG.PULSE_HINT_RANGE:
 			# Fora da tela: um clarao na borda aponta de onde veio o pulso.
 			var edge: Vector2 = Vector2(clampf(p.x,view.position.x,view.end.x),clampf(p.y,view.position.y,view.end.y))
-			draw_circle(edge,34.0,Color(1.0,.62,.74,.07*v))
-			draw_circle(edge,16.0,Color(1.0,.72,.82,.16*v))
-			draw_circle(edge,4.0,Color(1.0,.90,.93,.55*v))
+			iso_renderer.disc(self,edge,34.0,Color(1.0,.62,.74,.07*v))
+			iso_renderer.disc(self,edge,16.0,Color(1.0,.72,.82,.16*v))
+			iso_renderer.disc(self,edge,4.0,Color(1.0,.90,.93,.55*v))
 	# Olhos da entidade no escuro: unico aviso visual quando a luz nao esta nela.
 	if CFG.EYES_RANGE > 0.0 and monster_present() and not monster_lit and not in_hiding:
 		var dist: float = draw_monster.distance_to(draw_player)
 		if dist < CFG.EYES_RANGE and not map.has_wall_between(monster, player):
 			var a: float = (1.0 - dist/CFG.EYES_RANGE)*0.95
 			var head: Vector2 = iso_renderer.screen(draw_monster)+Vector2(0,-85)
-			draw_circle(head+Vector2(-5,0),5.0,Color(1.0,.15,.36,a*0.22))
-			draw_circle(head+Vector2(5,0),5.0,Color(1.0,.15,.36,a*0.22))
-			draw_circle(head+Vector2(-5,0),2.0,Color(1.0,.30,.48,a))
-			draw_circle(head+Vector2(5,0),2.0,Color(1.0,.30,.48,a))
+			iso_renderer.disc(self,head+Vector2(-5,0),5.0,Color(1.0,.15,.36,a*0.22))
+			iso_renderer.disc(self,head+Vector2(5,0),5.0,Color(1.0,.15,.36,a*0.22))
+			iso_renderer.disc(self,head+Vector2(-5,0),2.0,Color(1.0,.30,.48,a))
+			iso_renderer.disc(self,head+Vector2(5,0),2.0,Color(1.0,.30,.48,a))
 	# Manequins que sairam do lugar: duas brasas miudas no escuro, logo fora do halo.
 	if not in_hiding:
 		for m in mannequins:
@@ -1846,8 +1859,8 @@ func _draw_glows() -> void:
 				continue
 			var ma: float = clampf((300.0-md)/140.0,0.0,1.0)*(0.30+0.12*sin(real_time*3.0+float(m["home"].x)))
 			var mh: Vector2 = iso_renderer.screen(m["at"])+Vector2(0,-73)
-			draw_circle(mh+Vector2(-2.6,0),1.1,Color(1.0,.38,.22,ma))
-			draw_circle(mh+Vector2(2.6,0),1.1,Color(1.0,.38,.22,ma))
+			iso_renderer.disc(self,mh+Vector2(-2.6,0),1.1,Color(1.0,.38,.22,ma))
+			iso_renderer.disc(self,mh+Vector2(2.6,0),1.1,Color(1.0,.38,.22,ma))
 	# Paredes e Costuras Espectrais com a luz comum: so um fiapo de fumaca roxa
 	# e um brilho miudo denunciam onde a parede "nao esta inteira".
 	if not spectral_open():
@@ -1863,22 +1876,22 @@ func _draw_glows() -> void:
 	if not apparition.is_empty() and not in_hiding and not is_illuminated(apparition["at"]):
 		var fake: Vector2 = iso_renderer.screen(apparition["at"])+Vector2(0,-85)
 		var fa: float = clampf((CFG.APPARITION_SECONDS-float(apparition["ttl"]))/1.2,0.0,1.0)*0.9
-		draw_circle(fake+Vector2(-5,0),5.0,Color(1.0,.15,.36,fa*0.22))
-		draw_circle(fake+Vector2(5,0),5.0,Color(1.0,.15,.36,fa*0.22))
-		draw_circle(fake+Vector2(-5,0),2.0,Color(1.0,.30,.48,fa))
-		draw_circle(fake+Vector2(5,0),2.0,Color(1.0,.30,.48,fa))
+		iso_renderer.disc(self,fake+Vector2(-5,0),5.0,Color(1.0,.15,.36,fa*0.22))
+		iso_renderer.disc(self,fake+Vector2(5,0),5.0,Color(1.0,.15,.36,fa*0.22))
+		iso_renderer.disc(self,fake+Vector2(-5,0),2.0,Color(1.0,.30,.48,fa))
+		iso_renderer.disc(self,fake+Vector2(5,0),2.0,Color(1.0,.30,.48,fa))
 
 func _spectral_wisp(p: Vector2, seed: float, size: float, view: Rect2) -> void:
 	## Indicador discreto (acima da escuridao): brilho roxo miudo e fumaca subindo.
 	if not view.has_point(p):
 		return
 	var beat: float = 0.5+0.5*sin(real_time*1.4+seed)
-	draw_circle(p,(10.0+4.0*beat)*size,Color(0.56,0.30,0.95,0.07+0.06*beat))
-	draw_circle(p,2.4*size+0.7*beat,Color(0.84,0.68,1.0,0.30+0.25*beat))
+	iso_renderer.disc(self,p,(10.0+4.0*beat)*size,Color(0.56,0.30,0.95,0.07+0.06*beat))
+	iso_renderer.disc(self,p,2.4*size+0.7*beat,Color(0.84,0.68,1.0,0.30+0.25*beat))
 	for k in range(4):
 		var f: float = fposmod(real_time*0.32+float(k)*0.25+seed*0.13,1.0)
 		var q: Vector2 = p+Vector2(sin(f*5.0+float(k)*1.7+seed)*5.0*size,-f*32.0*size)
-		draw_circle(q,(1.8+f*5.5)*size,Color(0.62,0.42,0.98,0.20*(1.0-f)*(0.6+0.4*beat)))
+		iso_renderer.disc(self,q,(1.8+f*5.5)*size,Color(0.62,0.42,0.98,0.20*(1.0-f)*(0.6+0.4*beat)))
 
 func _draw_hiding() -> void:
 	## De dentro do armario so se ve pelas frestas. Se ela estiver perto,
@@ -1889,16 +1902,16 @@ func _draw_hiding() -> void:
 		var ex: float = WIDTH*0.5 + sin(real_time*0.6)*260.0*(1.0-near)
 		var eye: Vector2 = Vector2(ex, 352.0 + sin(real_time*1.7)*5.0)
 		var size: float = 0.8 + 1.3*near
-		draw_circle(eye,150.0*size,Color("8f8088"))
+		iso_renderer.disc(self,eye,150.0*size,Color("8f8088"))
 		for v in range(9):
 			var va: float = TAU*float(v)/9.0+0.3
 			draw_line(eye+Vector2.from_angle(va)*52.0*size,eye+Vector2.from_angle(va+0.2)*96.0*size,Color("5a0f1c"),2.5*size)
-		draw_circle(eye,62.0*size,Color("050307"))
+		iso_renderer.disc(self,eye,62.0*size,Color("050307"))
 		# A pupila procura... e, bem de perto, para em voce.
 		var search: Vector2 = Vector2(sin(real_time*2.3)*22.0,cos(real_time*1.9)*9.0)*size*(1.0-near*near)
-		draw_circle(eye+search,26.0*size,Color(0.94,0.20,0.40,0.25))
-		draw_circle(eye+search,11.0*size,Color("f0457c"))
-		draw_circle(eye+search,4.0*size,Color("fff6f2"))
+		iso_renderer.disc(self,eye+search,26.0*size,Color(0.94,0.20,0.40,0.25))
+		iso_renderer.disc(self,eye+search,11.0*size,Color("f0457c"))
+		iso_renderer.disc(self,eye+search,4.0*size,Color("fff6f2"))
 	var dark: Color = Color(0.012,0.008,0.015,1.0 if near > 0.0 else 0.94)
 	var slits: Array = [296.0, 344.0, 392.0]
 	var top: float = 0.0
@@ -1999,7 +2012,7 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 	# Boca aberta: do canto esquerdo ate rasgar a bochecha direita.
 	var mouth: PackedVector2Array = PackedVector2Array([Vector2(-40,54),Vector2(0,48),Vector2(40,42),Vector2(72,26),Vector2(98,0),Vector2(84,42+jaw*0.4),Vector2(56,60+jaw*0.8),Vector2(20,70+jaw),Vector2(-14,70+jaw),Vector2(-40,58+jaw*0.3)])
 	draw_colored_polygon(mouth,Color("060204"))
-	draw_circle(Vector2(18,62+jaw*0.55),12.0+jaw*0.18,Color(0.42,0.03,0.08,0.85))
+	iso_renderer.disc(self,Vector2(18,62+jaw*0.55),12.0+jaw*0.18,Color(0.42,0.03,0.08,0.85))
 	# Maxilar que despenca, com os dentes de baixo em agulha.
 	var J: Vector2 = Vector2(0,jaw)
 	draw_colored_polygon(PackedVector2Array([Vector2(-74,56)+J,Vector2(-40,58)+J,Vector2(-14,70)+J,Vector2(20,70)+J,Vector2(56,60)+J,Vector2(80,48)+J,Vector2(66,72)+J,Vector2(36,104)+J,Vector2(0,116)+J,Vector2(-36,104)+J,Vector2(-66,72)+J]),marble)
@@ -2039,10 +2052,10 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 	# Olho esquerdo: amendoado, cilios longos, sobrancelha arqueada... e esclera preta.
 	var le: Vector2 = Vector2(-44,-34)
 	draw_colored_polygon(PackedVector2Array([le+Vector2(-34,4),le+Vector2(-18,-12),le+Vector2(4,-16),le+Vector2(26,-8),le+Vector2(34,2),le+Vector2(14,12),le+Vector2(-12,12)]),Color("050307"))
-	draw_circle(le+Vector2(2,-1),15.0,Color(eyes.r,eyes.g,eyes.b,0.22))
-	draw_circle(le+Vector2(2,-1),9.0,eyes)
+	iso_renderer.disc(self,le+Vector2(2,-1),15.0,Color(eyes.r,eyes.g,eyes.b,0.22))
+	iso_renderer.disc(self,le+Vector2(2,-1),9.0,eyes)
 	draw_line(le+Vector2(2,-8),le+Vector2(2,6),Color("050307"),3.0)
-	draw_circle(le+Vector2(-1,-4),2.2,Color("fff6f2"))
+	iso_renderer.disc(self,le+Vector2(-1,-4),2.2,Color("fff6f2"))
 	for k in range(7):
 		var lb: Vector2 = le+Vector2(-30+float(k)*10.0,-10-sin(float(k)/6.0*PI)*6.0)
 		draw_line(lb,lb+Vector2(-6.0+float(k)*0.6,-16.0-sin(float(k)/6.0*PI)*5.0),Color("050307"),2.6)
@@ -2053,11 +2066,11 @@ func _entity_face(center: Vector2, zoom: float, eyes: Color, gape: float = 1.0) 
 	for v in range(7):
 		var va: float = TAU*float(v)/7.0+0.4
 		draw_line(re+Vector2.from_angle(va)*28.0,re+Vector2.from_angle(va+0.25)*(48.0+fposmod(float(v)*13.0,9.0)),Color("5a0f1c"),2.0)
-	draw_circle(re,36.0,Color("050307"))
-	draw_circle(re+Vector2(-2,14),28.0,Color("050307"))
-	draw_circle(re+Vector2(-4,6),16.0,Color(eyes.r,eyes.g,eyes.b,0.16))
-	draw_circle(re+Vector2(-4,6),6.0,eyes)
-	draw_circle(re+Vector2(-4,6),2.2,Color("fff6f2"))
+	iso_renderer.disc(self,re,36.0,Color("050307"))
+	iso_renderer.disc(self,re+Vector2(-2,14),28.0,Color("050307"))
+	iso_renderer.disc(self,re+Vector2(-4,6),16.0,Color(eyes.r,eyes.g,eyes.b,0.16))
+	iso_renderer.disc(self,re+Vector2(-4,6),6.0,eyes)
+	iso_renderer.disc(self,re+Vector2(-4,6),2.2,Color("fff6f2"))
 	# Lagrimas pretas escorrendo dos dois lados.
 	for e in [le, re]:
 		var run: float = 62.0+14.0*sin(real_time*2.6+e.x*0.04)
@@ -2111,11 +2124,11 @@ func _claw(wrist: Vector2, side: float, spread: float) -> void:
 		var d3: Vector2 = d2.rotated(-side*0.34*curl)
 		var tip: Vector2 = mid+d3*28.0*k
 		iso_renderer.strand(self,[base,knuckle,mid,tip],8.5 if thumb else 7.5,4.2,marble,6)
-		draw_circle(knuckle,5.6,marble.lightened(0.05))
-		draw_circle(mid,4.6,marble.lightened(0.05))
+		iso_renderer.disc(self,knuckle,5.6,marble.lightened(0.05))
+		iso_renderer.disc(self,mid,4.6,marble.lightened(0.05))
 		var nail: Vector2 = d3.rotated(-side*0.35)
 		iso_renderer.strand(self,[tip-d3*5.0,tip+d3*12.0,tip+d3*22.0+nail*14.0,tip+d3*24.0+nail*34.0],4.6,0.3,Color("0a0508"),6)
-		draw_circle(tip+d3*24.0+nail*32.0,2.2,Color("5c0f1d"))
+		iso_renderer.disc(self,tip+d3*24.0+nail*32.0,2.2,Color("5c0f1d"))
 
 func _draw_jumpscare() -> void:
 	## O rosto bate na tela quase de imediato (0,12 s), ja enorme, tremendo
@@ -2170,8 +2183,8 @@ func _draw_intro() -> void:
 func _intro_arrival(k: float) -> void:
 	# 1) Chegada de carro: a mansao no alto, com janelas acesas ("parecia habitada").
 	draw_rect(Rect2(0,0,WIDTH,430),Color("0a0d1c"))
-	draw_circle(Vector2(905,118),46,Color(0.80,0.78,0.86,0.10))
-	draw_circle(Vector2(905,118),31,Color("c9c4d2"))
+	iso_renderer.disc(self,Vector2(905,118),46,Color(0.80,0.78,0.86,0.10))
+	iso_renderer.disc(self,Vector2(905,118),31,Color("c9c4d2"))
 	draw_colored_polygon(PackedVector2Array([Vector2(0,470),Vector2(420,405),Vector2(760,372),Vector2(WIDTH,410),Vector2(WIDTH,HEIGHT),Vector2(0,HEIGHT)]),Color("070910"))
 	var house: Color = Color("0d0f1a")
 	draw_rect(Rect2(660,238,300,150),house)
@@ -2196,10 +2209,10 @@ func _intro_arrival(k: float) -> void:
 	draw_rect(Rect2(-58,-24,112,24),Color("2b2233"))
 	draw_colored_polygon(PackedVector2Array([Vector2(-40,-24),Vector2(-26,-46),Vector2(22,-46),Vector2(36,-24)]),Color("231b2b"))
 	draw_rect(Rect2(-20,-42,36,15),Color("4b5a72"))
-	draw_circle(Vector2(-34,2),11,Color("08080c"))
-	draw_circle(Vector2(32,2),11,Color("08080c"))
-	draw_circle(Vector2(53,-12),4,Color("fff0b8"))
-	draw_circle(Vector2(-57,-14),3,Color("c2344a"))
+	iso_renderer.disc(self,Vector2(-34,2),11,Color("08080c"))
+	iso_renderer.disc(self,Vector2(32,2),11,Color("08080c"))
+	iso_renderer.disc(self,Vector2(53,-12),4,Color("fff0b8"))
+	iso_renderer.disc(self,Vector2(-57,-14),3,Color("c2344a"))
 	draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 	_center_text("A mansão parecia habitada.",672,24,Color("d9cfc4"))
 
@@ -2227,8 +2240,8 @@ func _intro_glimpse(t: float) -> void:
 	else:
 		# No escuro so se ve o par de olhos, cada vez maior.
 		for sx in [-44.0, 44.0]:
-			draw_circle(figure+Vector2(sx,-26.0)*zoom,15.0*zoom,Color(0.96,0.20,0.42,0.16))
-			draw_circle(figure+Vector2(sx,-26.0)*zoom,6.0*zoom,Color(1.0,0.26,0.46,0.95))
+			iso_renderer.disc(self,figure+Vector2(sx,-26.0)*zoom,15.0*zoom,Color(0.96,0.20,0.42,0.16))
+			iso_renderer.disc(self,figure+Vector2(sx,-26.0)*zoom,6.0*zoom,Color(1.0,0.26,0.46,0.95))
 	_center_text("Ela só anda quando ninguém a vê.",672,24,Color("d9cfc4"))
 
 func _intro_fragments(t: float) -> void:
@@ -2242,7 +2255,7 @@ func _intro_fragments(t: float) -> void:
 		var dx: float = slab.position.x+38.0+float(i)*62.0
 		var run: float = (12.0+fposmod(float(i)*53.0,58.0))*wet
 		draw_line(Vector2(dx,374.0),Vector2(dx,402.0+run),Color("4a0b17"),3.0 if i%3 == 0 else 2.0)
-		draw_circle(Vector2(dx,402.0+run),2.4,Color("5c0f1d"))
+		iso_renderer.disc(self,Vector2(dx,402.0+run),2.4,Color("5c0f1d"))
 	for i in range(3):
 		var born: float = t-0.35-float(i)*0.95
 		if born < 0.0:
@@ -2250,8 +2263,8 @@ func _intro_fragments(t: float) -> void:
 		var c: Vector2 = Vector2(WIDTH*0.5+(float(i)-1.0)*230.0,368.0)
 		var a: float = clampf(born/0.5,0.0,1.0)
 		var pulse: float = 0.5+0.5*sin(real_time*3.0-float(i)*1.2)
-		draw_circle(c+Vector2(0,-26),84.0+18.0*pulse,Color(1.0,0.58,0.72,0.06*a))
-		draw_circle(c+Vector2(0,-26),56.0+8.0*pulse,Color(1.0,0.66,0.78,0.09*a))
+		iso_renderer.disc(self,c+Vector2(0,-26),84.0+18.0*pulse,Color(1.0,0.58,0.72,0.06*a))
+		iso_renderer.disc(self,c+Vector2(0,-26),56.0+8.0*pulse,Color(1.0,0.66,0.78,0.09*a))
 		iso_renderer.gel(self,c,48.0,sin(real_time*4.2-float(i)*1.3)*(2.0+3.0*pulse),a)
 		var victim: String = str(VICTIMS[i]["name"])
 		var w: float = ThemeDB.fallback_font.get_string_size(victim,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x
@@ -2264,5 +2277,5 @@ func _intro_locked(t: float) -> void:
 	draw_rect(Rect2(WIDTH*0.5-70.0,170.0,140.0,290.0),Color("0f0c14"))
 	draw_rect(Rect2(WIDTH*0.5-70.0,170.0,140.0*(1.0-slam),290.0),Color(0.95,0.80,0.50,0.35))
 	draw_rect(Rect2(WIDTH*0.5-70.0,170.0,140.0,290.0),Color("3a2c33"),false,3.0)
-	draw_circle(Vector2(WIDTH*0.5+48.0,322.0),5.0,Color("8d7a5c"))
+	iso_renderer.disc(self,Vector2(WIDTH*0.5+48.0,322.0),5.0,Color("8d7a5c"))
 	_center_text("A porta se trancou atrás de você.",672,24,Color("d9cfc4"))

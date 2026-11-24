@@ -167,7 +167,7 @@ func _ritual_circle() -> void:
         # Velas nas pontas.
         cv.draw_line(star[k],star[k]+Vector2(0,-7),Color("cdbfae"),2.4)
         var flick: float = 1.6+0.5*sin(g.real_time*9.0+float(k)*2.1)
-        cv.draw_circle(star[k]+Vector2(0,-9),flick,Color(1.0,.72,.35,.85))
+        disc(cv,star[k]+Vector2(0,-9),flick,Color(1.0,.72,.35,.85))
     if g.ritual_running:
         cv.draw_arc(altar_pt,45.0+4.0*sin(g.time_passed*4),0,TAU,60,Color("ebb1d6"),3.0)
 
@@ -192,7 +192,7 @@ func _decals() -> void:
             continue
         _floor_matrix(hp,float(h["rot"]))
         var ink: Color = Color(0.34,0.03,0.08,0.72)
-        cv.draw_circle(Vector2.ZERO,4.2,ink)
+        disc(cv,Vector2.ZERO,4.2,ink)
         for fx in [-3.6,-1.2,1.2,3.6]:
             cv.draw_line(Vector2(fx,-3.0),Vector2(fx*1.35,-10.5+absf(fx)*0.6),ink,1.7)
         cv.draw_line(Vector2(-4.0,0.5),Vector2(-8.5,-2.5),ink,1.9)
@@ -248,15 +248,15 @@ func _hanged(h: Dictionary) -> void:
     var clot: Color = Color("2a050c")
     # --- Poca de sangue no piso, com respingos e o pingo caindo nela ---
     cv.draw_set_transform(p,0.0,Vector2(1.0,0.5))
-    cv.draw_circle(Vector2.ZERO,17.0,Color(0,0,0,0.38))
+    disc(cv,Vector2.ZERO,17.0,Color(0,0,0,0.38))
     for k in range(7):
         var pa: float = TAU*float(k)/7.0+idx
-        cv.draw_circle(Vector2.from_angle(pa)*(6.0+_h(idx,float(k))*8.0),5.0+_h(float(k),idx)*4.5,clot)
-    cv.draw_circle(Vector2(1,0),10.5,blood)
-    cv.draw_circle(Vector2(-3,-3),4.0,Color(0.58,0.12,0.18,0.5))
+        disc(cv,Vector2.from_angle(pa)*(6.0+_h(idx,float(k))*8.0),5.0+_h(float(k),idx)*4.5,clot)
+    disc(cv,Vector2(1,0),10.5,blood)
+    disc(cv,Vector2(-3,-3),4.0,Color(0.58,0.12,0.18,0.5))
     for k in range(7):
         var sa: float = TAU*_h(float(k)*3.1,idx+1.0)
-        cv.draw_circle(Vector2.from_angle(sa)*(21.0+_h(idx,float(k)*1.7)*12.0),0.9+_h(float(k),2.0)*1.5,blood)
+        disc(cv,Vector2.from_angle(sa)*(21.0+_h(idx,float(k)*1.7)*12.0),0.9+_h(float(k),2.0)*1.5,blood)
     var drop: float = fposmod(t*0.9+idx*0.37,1.0)
     if drop > 0.72:
         var rip: float = (drop-0.72)/0.28
@@ -298,9 +298,9 @@ func _hanged(h: Dictionary) -> void:
         var sy: float = float(s[1])
         var sl: float = float(s[2])*(0.92+0.08*sin(t*0.5+sx))
         cv.draw_polyline(PackedVector2Array([Vector2(sx,sy),Vector2(sx+0.6,sy+sl*0.5),Vector2(sx*0.85,sy+sl)]),blood,float(s[3]),true)
-        cv.draw_circle(Vector2(sx*0.85,sy+sl),float(s[3])*0.9,blood)
+        disc(cv,Vector2(sx*0.85,sy+sl),float(s[3])*0.9,blood)
     var run: float = fposmod(t*0.35+idx*0.5,1.0)
-    cv.draw_circle(Vector2(-4.0+run*0.6,93.0+run*38.0),1.2,fresh)
+    disc(cv,Vector2(-4.0+run*0.6,93.0+run*38.0),1.2,fresh)
     # Cordas apertando o lencol, afundando no tecido.
     for ry in [86.0,101.0,121.0]:
         var half: float = 11.5 if ry < 90.0 else (8.5 if ry < 110.0 else 8.0)
@@ -310,23 +310,23 @@ func _hanged(h: Dictionary) -> void:
     var hand: Vector2 = Vector2(-15.5,121.0)
     _limb(Vector2(-11,79),Vector2(-15,100),2.6,2.1,skin)
     _limb(Vector2(-15,100),hand,2.1,1.6,skin)
-    cv.draw_circle(Vector2(-13.5,88),1.4,bruise)
-    cv.draw_circle(Vector2(-15.2,108),1.1,bruise)
+    disc(cv,Vector2(-13.5,88),1.4,bruise)
+    disc(cv,Vector2(-15.2,108),1.1,bruise)
     cv.draw_line(Vector2(-12,82),Vector2(-15.2,118),blood,0.9,true)
     for f in [-1.6,-0.5,0.6,1.6]:
         cv.draw_line(hand,hand+Vector2(f,6.0+absf(f)*-0.8),skin.darkened(0.15),0.9,true)
-        cv.draw_circle(hand+Vector2(f,6.0+absf(f)*-0.8),0.5,Color("1a0d12"))
+        disc(cv,hand+Vector2(f,6.0+absf(f)*-0.8),0.5,Color("1a0d12"))
     var fd: float = fposmod(t*1.1+idx*0.7,1.0)
-    cv.draw_circle(hand+Vector2(0.4,7.0+fd*fd*32.0),1.0,Color(0.45,0.05,0.10,1.0-fd))
+    disc(cv,hand+Vector2(0.4,7.0+fd*fd*32.0),1.0,Color(0.45,0.05,0.10,1.0-fd))
     # Pes descalcos, arroxeados, com as pontas viradas para baixo.
     var twitch: float = sin(t*31.0)*1.0 if (lit and fposmod(t+idx,3.1) < 0.35) else 0.0
     var feet: Color = Color("6e5e78")
     for fx in [-3.0, 3.0]:
         var tip: Vector2 = Vector2(fx*1.1+(twitch if fx < 0.0 else -twitch),151.0)
         _limb(Vector2(fx,138),tip,2.2,1.4,feet)
-        cv.draw_circle(tip,1.0,Color("2a1c2c"))
+        disc(cv,tip,1.0,Color("2a1c2c"))
         cv.draw_line(Vector2(fx,139),tip,blood,0.8,true)
-    cv.draw_circle(Vector2(-3.3,152.0+drop*drop*8.0),1.2,Color(0.45,0.05,0.10,1.0-drop))
+    disc(cv,Vector2(-3.3,152.0+drop*drop*8.0),1.2,Color(0.45,0.05,0.10,1.0-drop))
     # --- Cabeca: o pescoco quebrado a deixa tombada sobre o ombro ---
     var tilt: float = 0.62+sin(t*0.6+idx)*0.04
     const HEAD_SCALE: float = 1.3
@@ -351,11 +351,11 @@ func _hanged(h: Dictionary) -> void:
         look = to_hero.normalized().rotated(-(sway+tilt))*0.7
     for ex in [-2.6, 2.0]:
         var eye: Vector2 = Vector2(ex,-8.6)
-        cv.draw_circle(eye+Vector2(0,0.3),2.5,Color("1e141c"))              # orbita funda e roxa
+        disc(cv,eye+Vector2(0,0.3),2.5,Color("1e141c"))              # orbita funda e roxa
         _oval(eye,1.6,1.05,Color("c2b59c"))                                # esclera amarelada
         cv.draw_line(eye+Vector2(-1.4,0.2),eye+Vector2(-0.5,0.0),Color(0.72,0.10,0.14,0.8),0.35,true)
         cv.draw_line(eye+Vector2(1.4,0.3),eye+Vector2(0.6,-0.1),Color(0.72,0.10,0.14,0.7),0.35,true)
-        cv.draw_circle(eye+look,0.45 if near else 0.6,Color("0a0508"))
+        disc(cv,eye+look,0.45 if near else 0.6,Color("0a0508"))
     # Boca aberta num grito que nao saiu; sangue preto escorre pelo queixo.
     var gape: float = 1.45+(0.7+0.3*sin(t*5.0) if near else 0.0)
     _oval(Vector2(-0.5,-4.2),1.5,gape*0.9,Color("120508"))
@@ -376,7 +376,7 @@ func _hanged(h: Dictionary) -> void:
     for k in range(4):
         var fa: float = t*(3.1+float(k)*0.7)+float(k)*1.9+idx
         var fp: Vector2 = fly_c+Vector2(cos(fa)*(11.0+float(k)*2.0),sin(fa*1.7)*7.0)+Vector2(randf_range(-0.6,0.6),randf_range(-0.6,0.6))
-        cv.draw_circle(fp,0.85,Color("050305"))
+        disc(cv,fp,0.85,Color("050305"))
 
 func _mannequin(m: Dictionary) -> void:
     ## Manequim de costura da oficina. Cabeca de gesso rachada, olhos fundos
@@ -407,13 +407,13 @@ func _mannequin(m: Dictionary) -> void:
         poly([p-perp*5.0,p+perp*5.0,p+away+perp*9.0,p+away-perp*9.0],Color(0,0,0,0.30))
     # Poca pequena embaixo, alimentada pelo que pinga da barra.
     cv.draw_set_transform(p+Vector2(3,2),0.0,Vector2(1.0,0.5))
-    cv.draw_circle(Vector2.ZERO,6.0,blood.darkened(0.3))
-    cv.draw_circle(Vector2(-1,-1),3.2,blood)
+    disc(cv,Vector2.ZERO,6.0,blood.darkened(0.3))
+    disc(cv,Vector2(-1,-1),3.2,blood)
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
     # Tripe de ferro enferrujado e haste.
     for leg in [Vector2(-10,2),Vector2(10,2),Vector2(0,6)]:
         cv.draw_line(p+Vector2(0,-6),p+leg,Color("2f262c"),2.2,true)
-        cv.draw_circle(p+leg,1.3,Color("4a3a36"))
+        disc(cv,p+leg,1.3,Color("4a3a36"))
     cv.draw_line(p+Vector2(0,-6),p+Vector2(0,-26),Color("3b3038"),2.6,true)
     # Braco quebrado, do lado oposto: pende e dobra o cotovelo ao contrario.
     var sh2: Vector2 = p+Vector2(-side*9.5,-55)
@@ -421,15 +421,15 @@ func _mannequin(m: Dictionary) -> void:
     var wr2: Vector2 = el2+Vector2(side*3.5,9.5)
     _limb(sh2,el2,1.9,1.6,wood)
     _limb(el2,wr2,1.6,1.3,wood)
-    cv.draw_circle(el2,2.2,joint)
+    disc(cv,el2,2.2,joint)
     for f in [-1.2,0.0,1.2]:
         cv.draw_line(wr2,wr2+Vector2(f*0.8+side*1.0,5.5),wood.darkened(0.2),0.8,true)
     # Tronco: busto de linho manchado, mais escuro do lado da sombra.
     var torso: Array = [p+Vector2(-9,-24),p+Vector2(-12,-36),p+Vector2(-10,-46),p+Vector2(-12,-54),p+Vector2(-6,-58),p+Vector2(6,-58),p+Vector2(12,-54),p+Vector2(10,-46),p+Vector2(12,-36),p+Vector2(9,-24)]
     _shape(torso,linen,true)
     _shape([p+Vector2(1,-24),p+Vector2(1,-58),p+Vector2(6,-58),p+Vector2(12,-54),p+Vector2(10,-46),p+Vector2(12,-36),p+Vector2(9,-24)],linen_dk,false)
-    cv.draw_circle(p+Vector2(-6,-31),3.0,Color(0.42,0.32,0.20,0.35))
-    cv.draw_circle(p+Vector2(5,-40),2.4,Color(0.42,0.32,0.20,0.30))
+    disc(cv,p+Vector2(-6,-31),3.0,Color(0.42,0.32,0.20,0.35))
+    disc(cv,p+Vector2(5,-40),2.4,Color(0.42,0.32,0.20,0.30))
     poly([p+Vector2(-9,-24),p+Vector2(9,-24),p+Vector2(8,-22),p+Vector2(-8,-22)],Color("3b3038"))
     # Corte em Y, do ombro ao umbigo, costurado com linha preta grossa. Ainda sangra.
     var cut: Array = [[p+Vector2(-8,-55),p+Vector2(0,-48)],[p+Vector2(8,-55),p+Vector2(0,-48)],[p+Vector2(0,-48),p+Vector2(0,-29)]]
@@ -444,11 +444,11 @@ func _mannequin(m: Dictionary) -> void:
         var dl: float = 6.0+fposmod(dx*13.0+seed*40.0,7.0)
         cv.draw_line(p+Vector2(dx*0.6,-30),p+Vector2(dx,-30+dl),blood,1.0,true)
     var drip: float = fposmod(t*0.6+seed*7.0,1.0)
-    cv.draw_circle(p+Vector2(2.5,-23.0+drip*drip*24.0),0.9,Color(0.45,0.05,0.10,1.0-drip))
+    disc(cv,p+Vector2(2.5,-23.0+drip*drip*24.0),0.9,Color(0.45,0.05,0.10,1.0-drip))
     # Alfinetes espetados no busto.
     for pin in [[Vector2(-8,-40),Vector2(-12,-43),Color("b0202a")],[Vector2(7,-50),Vector2(11,-53),Color("e8e2d6")],[Vector2(-4,-34),Vector2(-7,-31),Color("b0202a")],[Vector2(8,-31),Vector2(12,-29),Color("2a2a30")]]:
         cv.draw_line(p+pin[0],p+pin[1],Color("c9c9cf"),0.6,true)
-        cv.draw_circle(p+pin[1],1.1,pin[2])
+        disc(cv,p+pin[1],1.1,pin[2])
     # Fita metrica pendurada no pescoco.
     var tape: Color = Color("c9b25a")
     for tx in [-1.0, 1.0]:
@@ -479,7 +479,7 @@ func _mannequin(m: Dictionary) -> void:
         _oval(Vector2(ex,-3.6),1.9,1.4,Color("140c10"))
         cv.draw_line(Vector2(ex-0.4,-2.4),Vector2(ex-0.6,0.4+absf(ex)*0.3),Color(0.20,0.10,0.10,0.55),0.5,true)
         if glow > 0.0:
-            cv.draw_circle(Vector2(ex,-3.5),0.65,Color(1.0,0.28,0.20,glow))
+            disc(cv,Vector2(ex,-3.5),0.65,Color(1.0,0.28,0.20,glow))
     # Boca costurada; os pontos esticam num sorriso quando ela se aproxima.
     var grin: float = raise*(1.0 if near else 0.55)
     var mouth: PackedVector2Array = PackedVector2Array()
@@ -510,8 +510,8 @@ func _mannequin(m: Dictionary) -> void:
     var wr: Vector2 = el+d2*(10.5+2.0*raise)
     _limb(sh,el,2.3,1.9,wood)
     _limb(el,wr,1.9,1.5,wood)
-    cv.draw_circle(sh,2.4,joint)
-    cv.draw_circle(el,2.1,joint)
+    disc(cv,sh,2.4,joint)
+    disc(cv,el,2.1,joint)
     _oval(wr+d2*1.6,2.0,1.5,wood.lightened(0.05),d2.angle())
     # Dedos fechados e um indicador comprido demais, com unha preta pontuda.
     var curl_side: Vector2 = d2.orthogonal()*side
@@ -521,7 +521,7 @@ func _mannequin(m: Dictionary) -> void:
     var knuckle: Vector2 = wr+d2*3.0
     var index_tip: Vector2 = knuckle+d2*(4.0+5.0*raise)
     cv.draw_line(knuckle,index_tip,wood,1.1,true)
-    cv.draw_circle(knuckle+d2*(2.0+2.5*raise),0.7,joint)
+    disc(cv,knuckle+d2*(2.0+2.5*raise),0.7,joint)
     cv.draw_line(index_tip,index_tip+d2*(1.5+2.5*raise),Color("0a0508"),1.0,true)
 
 func _blood_trail() -> void:
@@ -533,8 +533,8 @@ func _blood_trail() -> void:
         var a: float = clampf(float(drop["ttl"])/8.0,0.0,1.0)*0.62
         var r: float = float(drop["r"])
         cv.draw_set_transform(p,0.0,Vector2(1.0,0.5))
-        cv.draw_circle(Vector2.ZERO,r,Color(0.30,0.02,0.07,a))
-        cv.draw_circle(Vector2(r*0.9,r*0.5),r*0.38,Color(0.24,0.01,0.05,a))
+        disc(cv,Vector2.ZERO,r,Color(0.30,0.02,0.07,a))
+        disc(cv,Vector2(r*0.9,r*0.5),r*0.38,Color(0.24,0.01,0.05,a))
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _floor_light() -> void:
@@ -557,7 +557,7 @@ func _floor_light() -> void:
             rays2.append(begin.lerp(beam_edge,0.84))
     poly(rays,Color(0.60,0.38,0.95,.23) if g.ghost_mode else Color(1.0,.83,.52,.19))
     poly(rays2,Color(.72,.56,1.0,.18) if g.ghost_mode else Color(1.0,.95,.69,.17))
-    cv.draw_circle(begin,18,Color(.63,.37,.94,.10) if g.ghost_mode else Color(.98,.88,.62,.08))
+    disc(cv,begin,18,Color(.63,.37,.94,.10) if g.ghost_mode else Color(.98,.88,.62,.08))
 
 func _object_should_draw(item: Dictionary) -> bool:
     var kind: String = item["kind"]
@@ -595,8 +595,8 @@ func gel(c: CanvasItem, at: Vector2, r: float, wobble: float = 0.0, alpha: float
     rim.append(pts[0])
     c.draw_polyline(rim,Color(1.0,0.93,0.95,0.85*alpha),1.2)
     # Miolo mais denso e brilho molhado.
-    c.draw_circle(at+Vector2(wobble*0.4,-r*0.26),r*0.46,Color(0.86,0.60,0.68,0.35*alpha))
-    c.draw_circle(at+Vector2(-r*0.34+wobble*0.6,-r*0.46),r*0.17,Color(1,1,1,0.80*alpha))
+    disc(c,at+Vector2(wobble*0.4,-r*0.26),r*0.46,Color(0.86,0.60,0.68,0.35*alpha))
+    disc(c,at+Vector2(-r*0.34+wobble*0.6,-r*0.46),r*0.17,Color(1,1,1,0.80*alpha))
 
 func _hide_spot(at: Vector2) -> void:
     _wardrobe(at)
@@ -621,7 +621,7 @@ func _portal(at: Vector2) -> void:
     var breath: float = 0.5+0.5*sin(t*2.4+seed*10.0)
     # Circulo de runas no piso, girando devagar.
     _floor_matrix(p,t*0.5+seed)
-    cv.draw_circle(Vector2.ZERO,18.0,Color(0.45,0.22,0.85,0.20+0.08*breath))
+    disc(cv,Vector2.ZERO,18.0,Color(0.45,0.22,0.85,0.20+0.08*breath))
     cv.draw_arc(Vector2.ZERO,16.0,0,TAU,40,Color(0.82,0.66,1.0,0.8),1.4)
     cv.draw_arc(Vector2.ZERO,11.0,0,TAU,30,Color(0.82,0.66,1.0,0.45),0.9)
     for k in range(8):
@@ -632,7 +632,7 @@ func _portal(at: Vector2) -> void:
     var top: Vector2 = p+Vector2(0,-54)
     var bottom: Vector2 = p+Vector2(0,-6)
     var w: float = 4.5+2.0*breath+4.0*near
-    cv.draw_circle(p+Vector2(0,-30),22.0+6.0*breath+8.0*near,Color(0.55,0.30,1.0,0.10+0.06*near))
+    disc(cv,p+Vector2(0,-30),22.0+6.0*breath+8.0*near,Color(0.55,0.30,1.0,0.10+0.06*near))
     var slit: PackedVector2Array = PackedVector2Array([top])
     for k in range(1,12):
         var f: float = float(k)/12.0
@@ -653,7 +653,7 @@ func _portal(at: Vector2) -> void:
         cv.draw_line(c+Vector2(-ww,-2.5),c+Vector2(ww,2.5),Color("e8dcff"),1.0,true)
     for k in range(5):
         var oa: float = t*1.3+float(k)*TAU/5.0+seed
-        cv.draw_circle(p+Vector2(cos(oa)*17.0,-28.0+sin(oa)*7.0-sin(t*2.0+float(k))*9.0),1.2,Color(0.92,0.82,1.0,0.75))
+        disc(cv,p+Vector2(cos(oa)*17.0,-28.0+sin(oa)*7.0-sin(t*2.0+float(k))*9.0),1.2,Color(0.92,0.82,1.0,0.75))
 
 func _portal_threads() -> void:
     ## Na luz espectral, um fio costurado no chao liga as duas pontas de cada
@@ -708,7 +708,7 @@ func _spectral_wall(cell: Vector2i) -> void:
         var crest: Vector2 = screen(at)+Vector2(0,-H)
         for k in range(3):
             var f: float = fposmod(t*0.4+float(k)/3.0+seed*0.07,1.0)
-            cv.draw_circle(crest+Vector2(sin(f*6.0+seed+float(k))*4.0,-f*18.0),1.5+f*4.0,Color(0.55,0.35,0.90,0.22*(1.0-f)))
+            disc(cv,crest+Vector2(sin(f*6.0+seed+float(k))*4.0,-f*18.0),1.5+f*4.0,Color(0.55,0.35,0.90,0.22*(1.0-f)))
         return
     var shimmer: float = 0.5+0.5*sin(t*3.1+seed)
     # Brilho lilas no piso por baixo do bloco.
@@ -737,7 +737,7 @@ func _spectral_wall(cell: Vector2i) -> void:
     for k in range(4):
         var f4: float = fposmod(t*0.5+float(k)*0.25+seed*0.05,1.0)
         var q: Vector2 = screen(at)+Vector2(sin(f4*7.0+float(k)*2.0+seed)*9.0,-4.0-f4*(H+14.0))
-        cv.draw_circle(q,1.0+0.6*(1.0-f4),Color(0.95,0.88,1.0,0.7*(1.0-f4)))
+        disc(cv,q,1.0+0.6*(1.0-f4),Color(0.95,0.88,1.0,0.7*(1.0-f4)))
 
 func _curve(ctrl: Array, steps: int = 6) -> PackedVector2Array:
     ## Contorno fechado e arredondado que passa por todos os pontos de controle.
@@ -787,7 +787,19 @@ func strand(c: CanvasItem, ctrl: Array, w0: float, w1: float, color: Color, step
             idx.append_array([a,a+1,a+2,a+1,a+3,a+2])
     RenderingServer.canvas_item_add_triangle_array(c.get_canvas_item(),idx,verts,cols)
 
-func _shape(ctrl: Array, color: Color, outline: bool = true) -> void:
+# Curva + triangulacao de cada forma, por pontos de controle. A maioria das
+# formas (mortalhas, manchas, cabecas) tem pontos fixos e era recalculada a
+# cada quadro; no navegador (WebAssembly) isso pesava muito.
+var _shape_cache: Dictionary = {}
+const SHAPE_CACHE_MAX: int = 1024
+
+func _shape_geometry(ctrl: Array) -> Array:
+    ## [pontos, indices, contorno fechado, cores, cor das cores, controle];
+    ## vazio se a forma for invalida.
+    var key: int = ctrl.hash()
+    var entry: Variant = _shape_cache.get(key)
+    if entry != null and (entry.is_empty() or entry[5] == ctrl):
+        return entry
     var pts: PackedVector2Array = _curve(ctrl)
     # Triangula aqui: se a curva suave se cruzar em alguma volta fechada,
     # usa o contorno dos pontos de controle em vez de nao desenhar nada.
@@ -795,16 +807,32 @@ func _shape(ctrl: Array, color: Color, outline: bool = true) -> void:
     if idx.is_empty():
         pts = PackedVector2Array(ctrl)
         idx = Geometry2D.triangulate_polygon(pts)
-        if idx.is_empty():
-            return
-    var cols: PackedColorArray = PackedColorArray()
-    cols.resize(pts.size())
-    cols.fill(color)
-    RenderingServer.canvas_item_add_triangle_array(cv.get_canvas_item(),idx,pts,cols)
+    var result: Array = []
+    if not idx.is_empty():
+        var closed: PackedVector2Array = pts.duplicate()
+        closed.append(pts[0])
+        var cols: PackedColorArray = PackedColorArray()
+        cols.resize(pts.size())
+        result = [pts, idx, closed, cols, null, ctrl.duplicate()]
+    # Formas animadas mudam a cada quadro: o limite impede o cache de crescer sem fim.
+    if _shape_cache.size() >= SHAPE_CACHE_MAX:
+        _shape_cache.clear()
+    _shape_cache[key] = result
+    return result
+
+func _shape(ctrl: Array, color: Color, outline: bool = true) -> void:
+    var geo: Array = _shape_geometry(ctrl)
+    if geo.is_empty():
+        return
+    if geo[4] != color:
+        var cols: PackedColorArray = geo[3]
+        cols.fill(color)
+        geo[3] = cols   # arrays empacotados sao copiados por valor
+        geo[4] = color
+    RenderingServer.canvas_item_add_triangle_array(cv.get_canvas_item(),geo[1],geo[0],geo[3])
     if outline:
         # Contorno suavizado: esconde o serrilhado e separa as formas.
-        pts.append(pts[0])
-        cv.draw_polyline(pts,color.darkened(0.38),0.8,true)
+        cv.draw_polyline(geo[2],color.darkened(0.38),0.8,true)
 
 func _oval(center: Vector2, rx: float, ry: float, color: Color, rot: float = 0.0) -> void:
     var pts: PackedVector2Array = PackedVector2Array()
@@ -813,14 +841,43 @@ func _oval(center: Vector2, rx: float, ry: float, color: Color, rot: float = 0.0
         pts.append(center+Vector2(cos(a)*rx,sin(a)*ry).rotated(rot))
     cv.draw_colored_polygon(pts,color)
 
+# Disco cheio rapido. CanvasItem.draw_circle monta e triangula um poligono de
+# 64 lados a cada chamada (~10 us nativo, varias vezes mais no navegador); os
+# corpos usam centenas de circulos por quadro. Aqui cada disco e um retangulo
+# texturizado, que o renderizador agrupa num unico lote.
+var _disc_textures: Array = []   # [diametro em texels, textura], do menor ao maior
+
+func _disc_texture(radius: float) -> Texture2D:
+    if _disc_textures.is_empty():
+        for size in [16, 32, 64, 128]:
+            var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+            var half: float = size * 0.5
+            for y in range(size):
+                for x in range(size):
+                    var d: float = Vector2(x + 0.5 - half, y + 0.5 - half).length()
+                    img.set_pixel(x, y, Color(1, 1, 1, clampf(half - d + 0.5, 0.0, 1.0)))
+            _disc_textures.append([size, ImageTexture.create_from_image(img)])
+    # Escolhe a textura com ~4 texels por pixel do raio (sobra para o zoom da Web).
+    for pair in _disc_textures:
+        if float(pair[0]) >= radius * 8.0:
+            return pair[1]
+    return _disc_textures[-1][1]
+
+func disc(c: CanvasItem, center: Vector2, radius: float, color: Color) -> void:
+    ## Substitui c.draw_circle(center, radius, color) (circulo cheio).
+    if radius <= 0.0:
+        return
+    var r: Vector2 = Vector2(radius, radius)
+    c.draw_texture_rect(_disc_texture(radius), Rect2(center - r, r * 2.0), false, color)
+
 func _limb(a: Vector2, b: Vector2, wa: float, wb: float, color: Color) -> void:
     ## Membro afunilado com as pontas redondas (coxa, antebraco, mecha de cabelo).
     var d: Vector2 = b-a
     if d.length_squared() > 0.01:
         var nrm: Vector2 = d.normalized().orthogonal()
         cv.draw_colored_polygon(PackedVector2Array([a+nrm*wa,b+nrm*wb,b-nrm*wb,a-nrm*wa]),color)
-    cv.draw_circle(a,wa,color)
-    cv.draw_circle(b,wb,color)
+    disc(cv,a,wa,color)
+    disc(cv,b,wb,color)
 
 # Estado da animacao da protagonista: marcha suavizada e fisica do busto.
 # Guardado entre quadros para o movimento ter inercia (nada muda aos trancos).
@@ -887,7 +944,7 @@ func _breast(center: Vector2, rx: float, ry: float, side: float, color: Color) -
 func _character() -> void:
     var center: Vector2 = screen(g.draw_player)
     if g.in_hiding:
-        cv.draw_circle(center + Vector2(0,-9),7,Color("b9a9df"))
+        disc(cv,center + Vector2(0,-9),7,Color("b9a9df"))
         return
     var dt: float = _anim_step()
     # A protagonista (adulta) e desenhada em escala maior, para o gesto ficar legivel.
@@ -1036,17 +1093,17 @@ func _character() -> void:
         var open: float = 1.0+0.55*fear
         _oval(e,2.5,1.45*open,Color("f6eeea"),-side*0.10)
         var iris: Vector2 = e+Vector2(turn*0.6,0.15)
-        cv.draw_circle(iris,minf(1.45,1.3*open),Color("3c2452"))
-        cv.draw_circle(iris+Vector2(0,0.25),minf(1.05,0.95*open),Color("7a4ea0"))
-        cv.draw_circle(iris,0.55,Color("0d0812"))
-        cv.draw_circle(iris+Vector2(-0.5,-0.5),0.38,Color.WHITE)
-        cv.draw_circle(iris+Vector2(0.45,0.45),0.18,Color(1,1,1,0.8))
+        disc(cv,iris,minf(1.45,1.3*open),Color("3c2452"))
+        disc(cv,iris+Vector2(0,0.25),minf(1.05,0.95*open),Color("7a4ea0"))
+        disc(cv,iris,0.55,Color("0d0812"))
+        disc(cv,iris+Vector2(-0.5,-0.5),0.38,Color.WHITE)
+        disc(cv,iris+Vector2(0.45,0.45),0.18,Color(1,1,1,0.8))
         cv.draw_polyline(PackedVector2Array([e+Vector2(-side*2.6,0.1),e+Vector2(-side*1.2,-1.45*open),e+Vector2(side*1.2,-1.6*open),e+Vector2(side*2.7,-0.6),e+Vector2(side*3.6,-1.5)]),hair,1.0,true)
         cv.draw_polyline(PackedVector2Array([e+Vector2(-side*1.8,1.1),e+Vector2(side*0.4,1.45),e+Vector2(side*2.3,0.8)]),Color(0.35,0.20,0.25,0.45),0.5,true)
         cv.draw_polyline(PackedVector2Array([e+Vector2(-side*2.1,-3.2-1.4*fear),e+Vector2(side*0.6,-4.0-1.1*fear),e+Vector2(side*3.0,-3.4-0.3*fear)]),hair,0.75,true)
     # Nariz pequeno e suave.
     cv.draw_line(Vector2(turn*1.4,1.0),Vector2(turn*1.4+0.6,3.7),Color(0.55,0.33,0.28,0.55),0.6,true)
-    cv.draw_circle(Vector2(turn*1.4+0.2,4.1),0.5,Color(0.55,0.33,0.28,0.35))
+    disc(cv,Vector2(turn*1.4+0.2,4.1),0.5,Color(0.55,0.33,0.28,0.35))
     # Labios cheios: arco do cupido em cima, inferior mais carnudo com brilho.
     var m: Vector2 = Vector2(turn*1.1,6.3)
     var drop: float = 0.9*maxf(0.0,fear-0.45)/0.55
@@ -1054,7 +1111,7 @@ func _character() -> void:
         _oval(m+Vector2(0,0.55+drop*0.5),1.6,0.35+drop*0.6,Color("2a0d16"))
     poly([m+Vector2(-2.3,0.15),m+Vector2(-1.0,-0.75),m+Vector2(0,-0.4),m+Vector2(1.0,-0.75),m+Vector2(2.3,0.15),m+Vector2(0,0.4)],Color("a84b62"))
     poly([m+Vector2(-2.1,0.3+drop*0.3),m+Vector2(0,0.45+drop),m+Vector2(2.1,0.3+drop*0.3),m+Vector2(1.2,1.4+drop),m+Vector2(0,1.7+drop),m+Vector2(-1.2,1.4+drop)],Color("c2627a"))
-    cv.draw_circle(m+Vector2(-0.5,1.0+drop),0.35,Color(1,0.85,0.88,0.6))
+    disc(cv,m+Vector2(-0.5,1.0+drop),0.35,Color(1,0.85,0.88,0.6))
     # Cabelo da frente: topo com volume, risca de lado e franja em mechas
     # que caem varrendo a testa.
     _shape([Vector2(-9.6,-1),Vector2(-10.2,-7),Vector2(-6.2,-12.4),Vector2(0,-13.6),Vector2(6.2,-12.4),Vector2(10.2,-7),Vector2(9.6,-1),Vector2(8.2,-6.6),Vector2(5.2,-9.4),Vector2(2.6,-10.0),Vector2(-2,-9.6),Vector2(-6,-8.4),Vector2(-8.4,-5)],hair)
@@ -1094,9 +1151,9 @@ func _flashlight(from: Vector2, to: Vector2, glowing: bool) -> void:
     cv.draw_line(from,to,Color("4b3f5d"),8.3)
     cv.draw_line(from,to,Color("e1bd8c"),5.5)
     var spectral: bool = g.ghost_mode and g.light_on
-    cv.draw_circle(to,4.5,Color("b7a1ed") if spectral else Color("fbe4a3"))
+    disc(cv,to,4.5,Color("b7a1ed") if spectral else Color("fbe4a3"))
     if glowing:
-        cv.draw_circle(to,7.8,Color(.72,.52,1,.25) if spectral else Color(1,.94,.62,.25))
+        disc(cv,to,7.8,Color(.72,.52,1,.25) if spectral else Color(1,.94,.62,.25))
 
 func _monster() -> void:
     _afrodite(g.draw_monster, g.monster_lit, g.monster_state == "PERSEGUINDO" and not g.monster_lit)
@@ -1177,7 +1234,7 @@ func _afrodite(at: Vector2, lit: bool, chasing: bool) -> void:
     poly([Vector2(-15,-11),Vector2(0,-14),Vector2(15,-11),Vector2(19,-2),Vector2(14,4),Vector2(10,-3),Vector2(5,6),Vector2(0,-1),Vector2(-5,5),Vector2(-9,-4),Vector2(-14,4),Vector2(-19,-1)],wet)
     for dx in [-14.0,-5.0,5.0,14.0]:
         var drip: float = fposmod(t*1.6+dx*0.37,1.0)
-        cv.draw_circle(Vector2(dx,4.0+drip*5.0),0.9,Color(0.05,0.10,0.12,0.9*(1.0-drip)))
+        disc(cv,Vector2(dx,4.0+drip*5.0),0.9,Color(0.05,0.10,0.12,0.9*(1.0-drip)))
     for ax in [-11.0, 3.0, 12.0]:
         cv.draw_polyline(PackedVector2Array([Vector2(ax,-22+y*0.5),Vector2(ax+1.5+sin(t*1.9+ax),-13),Vector2(ax-0.5,-6),Vector2(ax+1.0+sin(t*2.3+ax)*1.5,3)]),Color("16261c"),1.2,true)
     # Bracos compridos de estatua; na perseguicao eles se estendem para a jogadora.
@@ -1200,7 +1257,7 @@ func _afrodite(at: Vector2, lit: bool, chasing: bool) -> void:
             var tip: Vector2 = knuckle+reach.rotated(f*1.3)*4.0
             cv.draw_line(hd+reach*1.5,knuckle,marble,1.1,true)
             cv.draw_line(knuckle,tip,Color("0a0508"),1.3,true)         # unhas pretas compridas
-            cv.draw_circle(tip,0.6,Color("5c0f1d"))
+            disc(cv,tip,0.6,Color("5c0f1d"))
     # Pescoco comprido e quebrado; a cabeca pende para os lados.
     _limb(Vector2(0,-60+y),Vector2(0,-65+y),2.2,2.0,marble)
     cv.draw_set_transform(base+Vector2(0,-65+y)*s,tilt,Vector2(s,s))
@@ -1227,15 +1284,15 @@ func _afrodite(at: Vector2, lit: bool, chasing: bool) -> void:
     # Olho esquerdo: ainda bonito, com cilios longos, mas a esclera e preta.
     var le: Vector2 = Vector2(-3.5,-8.5)
     _oval(le,2.6,1.4,Color("050307"))
-    cv.draw_circle(le+Vector2(0.2,0.1),0.95,eyes)
+    disc(cv,le+Vector2(0.2,0.1),0.95,eyes)
     for k in range(4):
         var lx: float = le.x-2.2+float(k)*1.4
         cv.draw_line(Vector2(lx,le.y-1.2),Vector2(lx-1.0,le.y-2.6),Color("050307"),0.5,true)
     cv.draw_polyline(PackedVector2Array([le+Vector2(-2.8,-2.9),le+Vector2(0,-3.9),le+Vector2(2.6,-3.2)]),Color("120c14"),0.8,true)
     # Olho direito: orbita vazia, so uma brasa la no fundo.
     var re: Vector2 = Vector2(3.6,-8.5)
-    cv.draw_circle(re,2.9,Color("050307"))
-    cv.draw_circle(re+Vector2(0,0.4),0.9,eyes)
+    disc(cv,re,2.9,Color("050307"))
+    disc(cv,re+Vector2(0,0.4),0.9,eyes)
     for side in [-1.0, 1.0]:
         var ex: float = side*3.5
         cv.draw_line(Vector2(ex,-7),Vector2(ex+side*0.4,1.0+sin(t*2.0+side)*1.2),Color("050307"),0.9,true)
@@ -1268,7 +1325,7 @@ func _vulto(v: Dictionary) -> void:
     var p: Vector2 = screen(v["at"])
     var a: float = clampf(minf(float(v["ttl"]),float(v["life"])-float(v["ttl"]))/0.35,0.0,1.0)*0.5
     poly([p+Vector2(-13,0),p+Vector2(-10,-46),p+Vector2(-5,-62),p+Vector2(5,-62),p+Vector2(10,-46),p+Vector2(13,0)],Color(0.02,0.01,0.05,a))
-    cv.draw_circle(p+Vector2(0,-64),9.0,Color(0.02,0.01,0.05,a))
+    disc(cv,p+Vector2(0,-64),9.0,Color(0.02,0.01,0.05,a))
 
 func _blob(c: CanvasItem, center: Vector2, rx: float, ry: float, strength: float) -> void:
     # Mancha radial (centro forte, borda zero) sem triangulacao automatica.
@@ -1407,7 +1464,7 @@ func _clues_and_ritual() -> void:
         var p: Vector2 = screen(g.altar_at())
         for i in range(9):
             var ang: float = TAU*float(i)/9.0 + g.time_passed*1.7
-            cv.draw_circle(p+Vector2(cos(ang)*44.0,sin(ang)*20.0-22),3.0,Color("eeb3d9"))
+            disc(cv,p+Vector2(cos(ang)*44.0,sin(ang)*20.0-22),3.0,Color("eeb3d9"))
         # As tres sacrificadas se erguem em volta do altar para levar Afrodite de volta.
         var progress: float = 1.0-g.ritual_left/g.CFG.RITUAL_SECONDS
         for i in range(3):
@@ -1416,9 +1473,9 @@ func _clues_and_ritual() -> void:
             var al: float = clampf(0.18+0.55*progress+0.08*sin(g.real_time*3.0+float(i)*2.0),0.0,0.85)
             var pale: Color = Color(.84,.90,1.0,al)
             poly([gp+Vector2(-11,0),gp+Vector2(-13,-30),gp+Vector2(-7,-48),gp+Vector2(7,-48),gp+Vector2(13,-30),gp+Vector2(11,0),gp+Vector2(4,-6),gp+Vector2(-4,-5)],pale)
-            cv.draw_circle(gp+Vector2(0,-56),8.0,pale)
-            cv.draw_circle(gp+Vector2(-3,-57),1.6,Color(0,0,0,al))
-            cv.draw_circle(gp+Vector2(3,-57),1.6,Color(0,0,0,al))
+            disc(cv,gp+Vector2(0,-56),8.0,pale)
+            disc(cv,gp+Vector2(-3,-57),1.6,Color(0,0,0,al))
+            disc(cv,gp+Vector2(3,-57),1.6,Color(0,0,0,al))
             # O vazio no peito, onde a seita cortou.
             cv.draw_line(gp+Vector2(-7,-38),gp+Vector2(7,-38),Color(.35,.03,.09,al),2.4)
             _text(gp+Vector2(-18,-70),str(g.VICTIMS[i]["name"]),10,Color(.88,.92,1.0,al))
@@ -1618,19 +1675,19 @@ func _floor_cell(x: int, y: int, style: String) -> void:
                 _fline(X,Y+k*8,X+TS,Y+k*8,Color(0.1,0.1,0.08,0.55),0.7)
                 _fline(X+k*8,Y,X+k*8,Y+TS,Color(0.1,0.1,0.08,0.55),0.7)
             if n > 0.86:
-                cv.draw_circle(_fw(X+10+n*12,Y+14),3.5,Color(0.30,0.03,0.07,0.45))
+                disc(cv,_fw(X+10+n*12,Y+14),3.5,Color(0.30,0.03,0.07,0.45))
         "workshop":
             # Cimento queimado: manchas de oleo, pontinhos e rachaduras.
             _fquad(X,Y,X+TS,Y+TS,Color("37383d").lerp(Color("2d2e33"),n))
             for k in range(7):
-                cv.draw_circle(_fw(X+_h(n,float(k))*TS,Y+_h(float(k),n)*TS),0.7,Color(0.6,0.6,0.62,0.18))
+                disc(cv,_fw(X+_h(n,float(k))*TS,Y+_h(float(k),n)*TS),0.7,Color(0.6,0.6,0.62,0.18))
             if n > 0.78:
                 cv.draw_polyline(PackedVector2Array([_fw(X+2,Y+8+n*10),_fw(X+11,Y+12),_fw(X+18,Y+9+n*6),_fw(X+30,Y+16)]),Color(0,0,0,0.5),0.9,true)
             if _h(float(y),float(x)) > 0.96:
                 var oc: Vector2 = _fw(X+16,Y+16)
                 cv.draw_set_transform(oc,0.0,Vector2(1.0,0.5))
-                cv.draw_circle(Vector2.ZERO,12.0,Color(0.04,0.04,0.06,0.45))
-                cv.draw_circle(Vector2(3,1),7.0,Color(0.02,0.02,0.04,0.35))
+                disc(cv,Vector2.ZERO,12.0,Color(0.04,0.04,0.06,0.45))
+                disc(cv,Vector2(3,1),7.0,Color(0.02,0.02,0.04,0.35))
                 cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
         "hall":
             # Marmore em placas grandes, alternadas, com veios.
@@ -1771,7 +1828,7 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
                 _wl(at,side,n*0.8,H-2,n*0.8+0.02,H-14-n*8,Color(0.22,0.15,0.08,0.45),1.4)
             if n > 0.88:
                 for d in range(4):
-                    cv.draw_circle(_wpt(at,side,0.3+_h(n,float(d))*0.4,8+_h(float(d),n)*14),0.8+_h(float(d),2.0),Color(0.35,0.03,0.08,0.7))
+                    disc(cv,_wpt(at,side,0.3+_h(n,float(d))*0.4,8+_h(float(d),n)*14),0.8+_h(float(d),2.0),Color(0.35,0.03,0.08,0.7))
         "bedroom":
             # Papel listrado rosa-velho com florzinhas; alguns quadros.
             _wq(at,side,0,1,0,H,Color("4b3440").darkened(k))
@@ -1779,7 +1836,7 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
                 var u0: float = float(i)/6.0
                 _wq(at,side,u0,u0+1.0/12.0,3,H,Color("57404c").darkened(k))
                 for r in range(5):
-                    cv.draw_circle(_wpt(at,side,u0+1.0/24.0,8+float(r)*6.0+float(i%2)*3.0),0.7,Color(0.78,0.55,0.62,0.35))
+                    disc(cv,_wpt(at,side,u0+1.0/24.0,8+float(r)*6.0+float(i%2)*3.0),0.7,Color(0.78,0.55,0.62,0.35))
             _wq(at,side,0,1,0,3.5,Color("3a2620").darkened(k))
             _wl(at,side,0,3.5,1,3.5,Color("5a3c30").darkened(k),1.0)
             if n > 0.8 and side == 0:
@@ -1787,9 +1844,9 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
                 _wq(at,side,0.33,0.67,17,29,Color("1a1418"))
                 var fc: Vector2 = _wpt(at,side,0.5,23.5)
                 cv.draw_set_transform(fc,0.0,Vector2(0.8,1.0))
-                cv.draw_circle(Vector2.ZERO,3.0,Color(0.62,0.56,0.55,0.55))
-                cv.draw_circle(Vector2(-1.1,-0.6),0.5,Color(0,0,0,0.8))
-                cv.draw_circle(Vector2(1.1,-0.6),0.5,Color(0,0,0,0.8))
+                disc(cv,Vector2.ZERO,3.0,Color(0.62,0.56,0.55,0.55))
+                disc(cv,Vector2(-1.1,-0.6),0.5,Color(0,0,0,0.8))
+                disc(cv,Vector2(1.1,-0.6),0.5,Color(0,0,0,0.8))
                 cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
             elif n > 0.65:
                 poly([_wpt(at,side,0.55,H-3),_wpt(at,side,0.8,H-4),_wpt(at,side,0.74,H-12),_wpt(at,side,0.6,H-9)],Color("6e6268").darkened(k))
@@ -1816,7 +1873,7 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
             for i in range(4):
                 var u: float = (float(i)+0.5)/4.0
                 _wl(at,side,u,14,u,H-2,Color(0.62,0.48,0.26,0.45).darkened(k),0.6)
-                cv.draw_circle(_wpt(at,side,u-0.125,25),0.8,Color(0.62,0.48,0.26,0.35))
+                disc(cv,_wpt(at,side,u-0.125,25),0.8,Color(0.62,0.48,0.26,0.35))
             _wq(at,side,0,1,0,13,Color("2d1b15").darkened(k))
             for pu in [[0.07,0.45],[0.55,0.93]]:
                 _wq(at,side,pu[0],pu[1],2.5,10.5,Color("24150f").darkened(k))
@@ -1827,8 +1884,8 @@ func _wall_face(at: Vector2, side: int, style: String, x: int, y: int) -> void:
                 cv.draw_line(sc,sc+Vector2(0,-4),Color("8a6a3a"),1.6)
                 cv.draw_line(sc+Vector2(-3,-4),sc+Vector2(3,-4),Color("8a6a3a"),1.4)
                 cv.draw_line(sc+Vector2(0,-4),sc+Vector2(0,-9),Color("d8cdbb"),1.8)
-                cv.draw_circle(sc+Vector2(0,-11),1.6,Color(1.0,0.75,0.4,0.85))
-                cv.draw_circle(sc+Vector2(0,-11),5.0,Color(1.0,0.7,0.35,0.12))
+                disc(cv,sc+Vector2(0,-11),1.6,Color(1.0,0.75,0.4,0.85))
+                disc(cv,sc+Vector2(0,-11),5.0,Color(1.0,0.7,0.35,0.12))
         "foyer":
             # Lambri de madeira com almofadas, do chao ao teto.
             _wq(at,side,0,1,0,H,Color("45322a").darkened(k))
@@ -2000,7 +2057,7 @@ func _counter(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     var kt: Vector2 = screen(at)+Vector2(0,-h)
     poly([kt+Vector2(-22,-5),kt+Vector2(-6,-10),kt+Vector2(12,-2),kt+Vector2(-2,6)],Color("3d0a14"))
     poly([kt+Vector2(8,-4),kt+Vector2(16,-7),kt+Vector2(24,-1),kt+Vector2(14,4)],Color("5c1420"))
-    cv.draw_circle(kt+Vector2(16,-3),3.0,Color("7a2231"))
+    disc(cv,kt+Vector2(16,-3),3.0,Color("7a2231"))
     cv.draw_line(kt+Vector2(-14,-6),kt+Vector2(-9,-21),Color("4a3527"),3.0)
     poly([kt+Vector2(-15,-6),kt+Vector2(-12,-15),kt+Vector2(-23,-13),kt+Vector2(-25,-5)],Color("aab3ba"))
     cv.draw_line(kt+Vector2(-25,-5),kt+Vector2(-15,-6),Color("5c0f1d"),1.4)
@@ -2009,7 +2066,7 @@ func _counter(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
         cv.draw_line(hook+Vector2(0,-60),hook,Color("56515c"),1.2)
         cv.draw_arc(hook+Vector2(0,4),4.0,-PI*0.5,PI,10,Color("8b8791"),1.6)
     var drop: float = fposmod(g.real_time*0.7,1.0)
-    cv.draw_circle(kt+Vector2(-30,-36+drop*30.0),1.3,Color(0.42,0.04,0.09,1.0-drop))
+    disc(cv,kt+Vector2(-30,-36+drop*30.0),1.3,Color(0.42,0.04,0.09,1.0-drop))
 
 func _bed(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     ## Cama de casal: cabeceira entalhada, colchao, travesseiros, cobertor
@@ -2020,7 +2077,7 @@ func _bed(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     _prism(at,-hw-4,-hd,-hw,hd,0,h+26,wood)
     for py in [-hd, hd-3.0]:
         _prism(at,-hw-5,py-0.5,-hw+1,py+3.5,0,h+30,wood.darkened(0.1))
-        cv.draw_circle(_wp(at,-hw-2,py+1.5,h+31.5),2.4,wood.lightened(0.1))
+        disc(cv,_wp(at,-hw-2,py+1.5,h+31.5),2.4,wood.lightened(0.1))
     for i in range(1,5):
         var yy: float = -hd+d*float(i)/5.0
         cv.draw_line(_wp(at,-hw,yy,h+3),_wp(at,-hw,yy,h+22),wood.darkened(0.35),1.0)
@@ -2042,14 +2099,14 @@ func _bed(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     var bt: Vector2 = _wp(at,hw*0.25,0,h)
     var breath: float = 1.0+0.13*sin(g.real_time*1.3)
     cv.draw_set_transform(bt+Vector2(0,-1.0-2.0*breath),0.46,Vector2(1.0,0.55*breath))
-    cv.draw_circle(Vector2(2,0),13.0,col.darkened(0.12))
-    cv.draw_circle(Vector2(0,-2),12.0,col.lightened(0.08))
-    cv.draw_circle(Vector2(18,-1),8.0,col.lightened(0.08))
-    cv.draw_circle(Vector2(-17,-2),6.5,col.lightened(0.12))
+    disc(cv,Vector2(2,0),13.0,col.darkened(0.12))
+    disc(cv,Vector2(0,-2),12.0,col.lightened(0.08))
+    disc(cv,Vector2(18,-1),8.0,col.lightened(0.08))
+    disc(cv,Vector2(-17,-2),6.5,col.lightened(0.12))
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
     poly([bt+Vector2(-6,3),bt+Vector2(6,1),bt+Vector2(12,9),bt+Vector2(0,13)],Color(0.30,0.03,0.08,0.75))
     _prism(at,hw,-hd,hw+3,hd,0,h+7,wood)
-    cv.draw_circle(_wp(at,hw+1.5,hd-1.5,h+8.5),2.0,wood.lightened(0.1))
+    disc(cv,_wp(at,hw+1.5,hd-1.5,h+8.5),2.0,wood.lightened(0.1))
 
 func _dresser_mirror(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     ## Penteadeira com gavetas e um espelho oval de moldura dourada.
@@ -2090,11 +2147,11 @@ func _dresser_mirror(at: Vector2, w: float, d: float, h: float, col: Color) -> v
         var x0: float = -hw+3+(w-6)*float(i)/float(dr)
         var x1: float = -hw+3+(w-6)*float(i+1)/float(dr)
         _qy(at,hd-0.99,x0+1,x1-1,6.5,top-4,col.darkened(0.12))
-        cv.draw_circle(_wp(at,(x0+x1)*0.5,hd-1,(top+2.5)*0.5),1.3,Color("c9a15d"))
+        disc(cv,_wp(at,(x0+x1)*0.5,hd-1,(top+2.5)*0.5),1.3,Color("c9a15d"))
     _prism(at,-hw,-hd,hw,hd,top-2,top,col.lightened(0.08))
     # Escova e um frasco de perfume em cima.
     _prism(at,hw-12,-2,hw-8,2,top,top+5,Color(0.75,0.55,0.70,0.85),false)
-    cv.draw_circle(_wp(at,hw-10,0,top+6.5),1.4,Color("c9a15d"))
+    disc(cv,_wp(at,hw-10,0,top+6.5),1.4,Color("c9a15d"))
 
 func _altar(at: Vector2, w: float, d: float, h: float, col: Color) -> void:
     ## Altar de pedra: plinto, corpo com paineis entalhados e laje de tampo.
@@ -2141,8 +2198,8 @@ func _candle(at: Vector2, x: float, y: float, z: float, tall: float) -> void:
     var tip: Vector2 = _wp(at,x,y,z+tall)
     var flick: float = 1.5+0.4*sin(g.real_time*9.0+x)
     cv.draw_line(tip,tip+Vector2(0,-1.5),Color("2a2020"),0.8)
-    cv.draw_circle(tip+Vector2(0,-3.0),flick,Color(1.0,0.75,0.38,0.9))
-    cv.draw_circle(tip+Vector2(0,-3.0),flick*3.5,Color(1.0,0.7,0.35,0.10))
+    disc(cv,tip+Vector2(0,-3.0),flick,Color(1.0,0.75,0.38,0.9))
+    disc(cv,tip+Vector2(0,-3.0),flick*3.5,Color(1.0,0.7,0.35,0.10))
 
 func _table_props(obj: Dictionary) -> void:
     ## O que esta em cima de cada mesa diz que comodo e aquele.
@@ -2163,10 +2220,10 @@ func _table_props(obj: Dictionary) -> void:
             for px in [-24.0, 0.0, 24.0]:
                 var pc: Vector2 = _wp(at,px,0,h+0.5)
                 cv.draw_set_transform(pc,0.0,Vector2(1.0,0.5))
-                cv.draw_circle(Vector2.ZERO,8.0,Color("bfbcb2"))
-                cv.draw_circle(Vector2.ZERO,5.5,Color("a8a49a"))
+                disc(cv,Vector2.ZERO,8.0,Color("bfbcb2"))
+                disc(cv,Vector2.ZERO,5.5,Color("a8a49a"))
                 if px == 0.0:
-                    cv.draw_circle(Vector2(1,0),3.5,Color("4a0b17"))
+                    disc(cv,Vector2(1,0),3.5,Color("4a0b17"))
                 cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
         "bedroom":
             _candle(at,-8,-6,h,9)
@@ -2200,23 +2257,23 @@ func _wardrobe(at: Vector2) -> void:
         cv.draw_line(_wp(at,x0+2.6,12,42*s),_wp(at,x1-2.6,12,42*s),wood.lightened(0.15),0.7)
     cv.draw_line(_wp(at,0,12,5*s),_wp(at,0,12,45*s),Color(0,0,0,0.85),1.4)
     for kx in [-2.2, 2.2]:
-        cv.draw_circle(_wp(at,kx,12,25*s),1.2,Color("c9a15d"))
+        disc(cv,_wp(at,kx,12,25*s),1.2,Color("c9a15d"))
     _prism(at,-15.5,-13,15.5,13.5,47*s,50*s,wood.lightened(0.06))
     var eye: float = 0.5+0.5*sin(g.real_time*0.6)
     if eye > 0.93:
-        cv.draw_circle(_wp(at,0.6,12,33*s),0.8,Color(0.9,0.2,0.3,0.8))
+        disc(cv,_wp(at,0.6,12,33*s),0.8,Color(0.9,0.2,0.3,0.8))
 
 func _battery(at: Vector2) -> void:
     ## Pilha grande deitada no chao: corpo verde, polo de cobre e rotulo.
     var p: Vector2 = screen(at)
-    cv.draw_circle(p+Vector2(0,-6),13.0,Color(.30,1.0,.76,.12+.05*sin(g.real_time*3.0+at.x)))
+    disc(cv,p+Vector2(0,-6),13.0,Color(.30,1.0,.76,.12+.05*sin(g.real_time*3.0+at.x)))
     var a: Vector2 = _wp(at,-7,0,3.2)
     var b: Vector2 = _wp(at,6,0,3.2)
     cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
     _oval(screen(at)+Vector2(0,1),10,3.5,Color(0,0,0,0.35))
     _limb(a,b,3.4,3.4,Color("2f9c76"))
     _limb(b,_wp(at,9,0,3.2),3.4,3.4,Color("c98a3c"))
-    cv.draw_circle(_wp(at,10.5,0,3.2),1.4,Color("e0b070"))
+    disc(cv,_wp(at,10.5,0,3.2),1.4,Color("e0b070"))
     cv.draw_line(_wp(at,-1,0,0.2),_wp(at,-1,0,6.2),Color("1d5e48"),1.4)
     cv.draw_line(a+Vector2(0,-2.4),b+Vector2(0,-2.4),Color(1,1,1,0.35),0.8)
     _text(_wp(at,-5,0,6.5)+Vector2(-1,5),"+",8,Color("e8f5ee"))
@@ -2239,7 +2296,7 @@ func _scene_object(obj: Dictionary) -> void:
             # Os "fragmentos" sao os silicones das sacrificadas: tremem e pulsam.
             var idx: int = int(obj["idx"])
             var v: float = g.fragment_pulse(idx)
-            cv.draw_circle(p+Vector2(0,-8),17.0+7.0*v,Color(1.0,.70,.80,.08+.14*v))
+            disc(cv,p+Vector2(0,-8),17.0+7.0*v,Color(1.0,.70,.80,.08+.14*v))
             gel(cv,p+Vector2(0,-2),11.0,sin(g.real_time*5.0+float(idx)*1.7)*(0.7+1.6*v))
         "key": _key(p)
         "book": _lectern(at,int(obj["number"]))
@@ -2251,7 +2308,7 @@ func _scene_object(obj: Dictionary) -> void:
         "door": _foyer_door(at)
         "lens": _lens(p)
         "clue":
-            cv.draw_circle(p+Vector2(0,-19),19,Color(.64,.42,.96,.26))
+            disc(cv,p+Vector2(0,-19),19,Color(.64,.42,.96,.26))
             cv.draw_arc(p+Vector2(0,-19),16,0,TAU,32,Color("bca1ff"),2.0)
             _text(p+Vector2(-7,-13),"?",17,Color("f5deff"))
 
@@ -2260,10 +2317,10 @@ func _key(p: Vector2) -> void:
     var gold: Color = Color("d9b25f")
     var dark: Color = Color("7a5a24")
     _floor_matrix(p,0.6)
-    cv.draw_circle(Vector2(1,1.5),7.5,Color(0,0,0,0.30))
+    disc(cv,Vector2(1,1.5),7.5,Color(0,0,0,0.30))
     cv.draw_arc(Vector2(-6,0),4.6,0,TAU,18,dark,3.2)
     cv.draw_arc(Vector2(-6,0),4.6,0,TAU,18,gold,2.0)
-    cv.draw_circle(Vector2(-6,0),1.2,dark)
+    disc(cv,Vector2(-6,0),1.2,dark)
     cv.draw_line(Vector2(-1.5,0),Vector2(13,0),dark,2.8)
     cv.draw_line(Vector2(-1.5,0),Vector2(13,0),gold,1.6)
     cv.draw_rect(Rect2(Vector2(9,0),Vector2(2,4)),gold)
@@ -2309,9 +2366,9 @@ func _seal(p: Vector2, number: int) -> void:
     var ink: Color = Color("c4adff") if lit else Color("8a7d94")
     _floor_matrix(p,0.0)
     if lit:
-        cv.draw_circle(Vector2.ZERO,19.0,Color(0.6,0.45,1.0,0.22+0.08*sin(g.real_time*5.0)))
-    cv.draw_circle(Vector2.ZERO,14.5,Color("2c2733"))
-    cv.draw_circle(Vector2.ZERO,13.0,Color("4a4352"))
+        disc(cv,Vector2.ZERO,19.0,Color(0.6,0.45,1.0,0.22+0.08*sin(g.real_time*5.0)))
+    disc(cv,Vector2.ZERO,14.5,Color("2c2733"))
+    disc(cv,Vector2.ZERO,13.0,Color("4a4352"))
     cv.draw_arc(Vector2.ZERO,11.0,0,TAU,32,ink,1.0)
     cv.draw_arc(Vector2.ZERO,6.5,0,TAU,24,ink,0.8)
     for k in range(10):
@@ -2333,7 +2390,7 @@ func _music_box(at: Vector2) -> void:
     var gold: Color = Color("c9a15d")
     _ground_shadow(at,26,20,0.3)
     for corner in [Vector2(-1,1),Vector2(1,1),Vector2(1,-1)]:
-        cv.draw_circle(_wp(at,corner.x*11,corner.y*8,1.0),1.6,gold.darkened(0.3))
+        disc(cv,_wp(at,corner.x*11,corner.y*8,1.0),1.6,gold.darkened(0.3))
     if g.musicbox_open:
         # Tampa aberta para tras, forrada de veludo, com espelhinho.
         var l0: Vector2 = _wp(at,-12,-9,13)
@@ -2349,7 +2406,7 @@ func _music_box(at: Vector2) -> void:
     cv.draw_line(_wp(at,-12,9,11.5),_wp(at,12,9,11.5),gold,1.0)
     cv.draw_line(_wp(at,12,9,11.5),_wp(at,12,-9,11.5),gold.darkened(0.2),1.0)
     var kh: Vector2 = _wp(at,0,9,8)
-    cv.draw_circle(kh,1.6,gold)
+    disc(cv,kh,1.6,gold)
     cv.draw_line(kh,kh+Vector2(0,2.2),Color("1a1010"),0.8)
     # Manivela na lateral.
     var crank: Vector2 = _wp(at,12,0,7.5)
@@ -2357,7 +2414,7 @@ func _music_box(at: Vector2) -> void:
     var arm: Vector2 = crank+Vector2(cos(turn)*3.0+3.0,sin(turn)*3.0-1.0)
     cv.draw_line(crank,crank+Vector2(3,-1),gold.darkened(0.2),1.4)
     cv.draw_line(crank+Vector2(3,-1),arm,gold,1.4)
-    cv.draw_circle(arm,1.3,Color("3a2018"))
+    disc(cv,arm,1.3,Color("3a2018"))
     if g.musicbox_open:
         _qtop(at,-10,-7,10,7,13.1,Color("7a1f2c"))
         # Bailarina de porcelana girando no centro.
@@ -2368,20 +2425,20 @@ func _music_box(at: Vector2) -> void:
         cv.draw_line(bc+Vector2(0,-8),bc+Vector2(0,-11),Color("efe4dc"),1.2)
         cv.draw_line(bc+Vector2(0,-10),bc+Vector2(3.0*spin,-13),Color("efe4dc"),0.7)
         cv.draw_line(bc+Vector2(0,-10),bc+Vector2(-3.0*spin,-13),Color("efe4dc"),0.7)
-        cv.draw_circle(bc+Vector2(0,-12.5),1.4,Color("efe4dc"))
+        disc(cv,bc+Vector2(0,-12.5),1.4,Color("efe4dc"))
     else:
         _prism(at,-12.5,-9.5,12.5,9.5,13,15,wood.lightened(0.06))
         var c0: Vector2 = _wp(at,0,0,15)
         cv.draw_set_transform(c0,0.0,Vector2(1.0,0.5))
         cv.draw_arc(Vector2.ZERO,6.0,0,TAU,20,gold,1.0)
-        cv.draw_circle(Vector2.ZERO,2.0,gold)
+        disc(cv,Vector2.ZERO,2.0,gold)
         cv.draw_set_transform(Vector2.ZERO,0.0,Vector2.ONE)
 
 func _letter(lp: Vector2) -> void:
     ## Envelope aberto com lacre de cera vermelha e a carta saindo dele.
     var read: bool = g.letter_read
     if not read:
-        cv.draw_circle(lp,14.0+2.5*sin(g.real_time*3.0),Color(1,.93,.72,.13))
+        disc(cv,lp,14.0+2.5*sin(g.real_time*3.0),Color(1,.93,.72,.13))
     _floor_matrix(lp,0.25)
     var paper: Color = Color("eadfc4") if not read else Color("a59c8a")
     cv.draw_rect(Rect2(Vector2(-9,-6),Vector2(18,12)),Color(0,0,0,0.25))
@@ -2392,8 +2449,8 @@ func _letter(lp: Vector2) -> void:
     cv.draw_polyline(PackedVector2Array([Vector2(-10,-7),Vector2(-1,0),Vector2(8,-7)]),paper.darkened(0.25),0.8)
     cv.draw_line(Vector2(-10,5),Vector2(-3,-1),paper.darkened(0.18),0.6)
     cv.draw_line(Vector2(8,5),Vector2(1,-1),paper.darkened(0.18),0.6)
-    cv.draw_circle(Vector2(-1,0),2.4,Color("8a1f2c"))
-    cv.draw_circle(Vector2(-1.4,-0.4),0.8,Color("c0404f"))
+    disc(cv,Vector2(-1,0),2.4,Color("8a1f2c"))
+    disc(cv,Vector2(-1.4,-0.4),0.8,Color("c0404f"))
     cv.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 func _note(p: Vector2) -> void:
@@ -2415,7 +2472,7 @@ func _vase(vp: Vector2) -> void:
     _shape([vp+Vector2(-3.5,0),vp+Vector2(3.5,0),vp+Vector2(6.8,-5),vp+Vector2(6.4,-10),vp+Vector2(3,-13.5),vp+Vector2(2.6,-16),vp+Vector2(4.2,-17.5),vp+Vector2(-4.2,-17.5),vp+Vector2(-2.6,-16),vp+Vector2(-3,-13.5),vp+Vector2(-6.4,-10),vp+Vector2(-6.8,-5)],porcelain,false)
     cv.draw_polyline(PackedVector2Array([vp+Vector2(-6.6,-7),vp+Vector2(-3,-6),vp+Vector2(3,-6),vp+Vector2(6.6,-7)]),Color("2c3c6a"),1.6,true)
     for k in range(4):
-        cv.draw_circle(vp+Vector2(-4.5+float(k)*3.0,-9.5),0.7,Color("2c3c6a"))
+        disc(cv,vp+Vector2(-4.5+float(k)*3.0,-9.5),0.7,Color("2c3c6a"))
     cv.draw_line(vp+Vector2(-4.2,-3),vp+Vector2(-4.6,-10),Color(1,1,1,0.4),1.0,true)
     var stems: Array = [[-5.0,-27.0,0.4],[0.0,-30.0,-0.2],[5.5,-26.0,0.5],[-2.5,-24.0,0.9]]
     for s in stems:
@@ -2427,7 +2484,7 @@ func _vase(vp: Vector2) -> void:
         for pk in range(4):
             var pa: float = TAU*float(pk)/4.0+float(s[2])
             _oval(droop+Vector2.from_angle(pa)*1.7,1.5,1.0,Color("6a2a3e"),pa)
-        cv.draw_circle(droop,0.9,Color("3a2a1a"))
+        disc(cv,droop,0.9,Color("3a2a1a"))
     _oval(vp+Vector2(-2.5,-20),2.4,1.0,Color("5d6a3a"),-0.6)
     _oval(vp+Vector2(3,-19),2.2,0.9,Color("5d6a3a"),0.7)
     for k in range(3):
@@ -2448,10 +2505,10 @@ func _foyer_door(at: Vector2) -> void:
         _qy(at,16.04,1.5,8.5,pz[0]*k,pz[1]*k,wood.darkened(0.25))
     var glint: bool = g.foyer_key_owned
     var knob: Vector2 = _wp(at,7.5,16.05,17*k)
-    cv.draw_circle(knob,1.8,Color("e1bc79") if glint else Color("8d7a5c"))
+    disc(cv,knob,1.8,Color("e1bc79") if glint else Color("8d7a5c"))
     _qy(at,16.05,6.6,8.4,12.5*k,15.5*k,Color("2a2018"))
     if glint:
-        cv.draw_circle(knob,5.0+sin(g.real_time*4.0),Color(1,0.85,0.5,0.15))
+        disc(cv,knob,5.0+sin(g.real_time*4.0),Color(1,0.85,0.5,0.15))
 
 func _lens(p: Vector2) -> void:
     ## Lente estranha num aro de latao com runas, pousada num suporte.
@@ -2460,10 +2517,10 @@ func _lens(p: Vector2) -> void:
     _oval(p+Vector2(0,1),7,2.5,Color(0,0,0,0.35))
     cv.draw_line(p,c+Vector2(0,8),Color("6b5a3a"),2.0)
     cv.draw_line(p+Vector2(-4,0),p+Vector2(4,0),Color("6b5a3a"),2.0)
-    cv.draw_circle(c,15.0,Color(.62,.40,.98,.14*la))
-    cv.draw_circle(c,8.6,Color("8a6a2a"))
-    cv.draw_circle(c,6.6,Color(0.55,0.42,0.85,0.85))
-    cv.draw_circle(c+Vector2(-1.5,-1.5),2.6,Color(0.9,0.85,1.0,0.35+0.3*la))
+    disc(cv,c,15.0,Color(.62,.40,.98,.14*la))
+    disc(cv,c,8.6,Color("8a6a2a"))
+    disc(cv,c,6.6,Color(0.55,0.42,0.85,0.85))
+    disc(cv,c+Vector2(-1.5,-1.5),2.6,Color(0.9,0.85,1.0,0.35+0.3*la))
     for k in range(8):
         var a: float = TAU*float(k)/8.0+g.real_time*0.4
         cv.draw_line(c+Vector2.from_angle(a)*7.0,c+Vector2.from_angle(a)*8.2,Color("e8d08f"),0.8)
@@ -2486,7 +2543,7 @@ func _labeled_door() -> void:
             _qy(at,10.01,x0,x1,0,33,wood)
             _qy(at,10.02,x0+2.5,x1-2.5,4,15,wood.darkened(0.25))
             _qy(at,10.02,x0+2.5,x1-2.5,18,29,wood.darkened(0.25))
-            cv.draw_circle(_wp(at,side*-2.6,10.03,17),1.4,Color("c9a15d"))
+            disc(cv,_wp(at,side*-2.6,10.03,17),1.4,Color("c9a15d"))
     _qy(at,10.02,-16,16,34,39,Color(0.55,0.45,0.30,0.6) if free else Color("1b2026"))
     for k in range(1,4):
         var fx: float = -16.0+32.0*float(k)/4.0

@@ -31,3 +31,6 @@ Thumbs.db
 # Backups
 *.bak
 *.backup
+
+# Exportacao Web (gerada pelo GitHub Actions)
+build/

@@ -16,10 +16,15 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.png"
 
+[audio]
+
+general/default_playback_type.web=0
+
 [display]
 
 window/size/viewport_height=720
 window/stretch/mode="viewport"
+window/stretch/mode.web="canvas_items"
 
 [rendering]
 

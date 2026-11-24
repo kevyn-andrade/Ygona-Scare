@@ -1,0 +1,13 @@
+# O Godot grava project.godot, .import, .tscn e scripts com quebra de linha LF.
+# Fixar LF para todo texto evita que o Git (core.autocrlf=true no Windows)
+# marque esses arquivos como modificados sem nenhuma mudanca de conteudo.
+* text=auto eol=lf
+
+# Binarios: nunca converter.
+*.png binary
+*.jpg binary
+*.wav binary
+*.ogg binary
+*.ttf binary
+*.otf binary
+*.exe binary

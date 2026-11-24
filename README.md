@@ -24,7 +24,7 @@ Protótipo acadêmico jogável, em GDScript, com **perspectiva isométrica 45° 
 | Correr (gasta fôlego e faz barulho) | Shift |
 | Arremessar objeto / distração | Q |
 | Ver ajuda | H |
-| Pausar | Esc |
+| Pausar (continuar, reiniciar, volume, menu inicial) | Esc |
 | Reaparecer após morte / reiniciar após vitória | R ou Enter |
 
 > **Touchpad parado enquanto anda?** A lanterna segue só o mouse, então dá para andar para um lado e iluminar o outro. Muitos sistemas (GNOME/Fedora, Windows) bloqueiam o touchpad enquanto uma tecla está pressionada; nesse caso, use um mouse ou desligue o bloqueio. No GNOME: `gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false`. No Windows 11: Configurações → Bluetooth e dispositivos → Touchpad → Toques → sensibilidade "Mais sensível".
@@ -239,3 +239,15 @@ Se trocar `lullaby.wav` por outra faixa, rode `python3 tools/build_audio.py` só
 
 - **Áudio novo:** `shriek.wav` é sintetizado em GDScript por `tools/build_shriek.gd` (`godot --headless --path . --script res://tools/build_shriek.gd`, depois `--import`). Para usar outro grito, substitua o arquivo mantendo o nome.
 - **Testes:** `smoke_test.gd` confere o rangido da porta, o altar afastado, o grito e o sino no fim do ritual e o clareamento. `visual_check.gd` grava `30_casa_clareada`.
+
+---
+
+## Menu de pausa — 24/11/2026
+
+| Tema | O que mudou |
+|---|---|
+| Menu de pausa | **Esc** abre um menu com **Continuar**, **Reiniciar jogo**, **Volume** e **Menu inicial**. Funciona com o teclado (↑ ↓ escolhe, Enter confirma, Esc volta ao jogo) e com o mouse (passar por cima seleciona, clique confirma). |
+| Confirmação | Reiniciar e voltar ao menu perdem o progresso, então pedem uma segunda confirmação (Enter ou clique de novo); Esc cancela. |
+| Volume | Volume geral de 0 a 100%: ← → em passos de 10%, arrastando a barra com o mouse ou com a rodinha. Enter no item alterna entre mudo e 100%. O valor fica salvo em `user://ajustes.cfg` e volta na próxima vez que o jogo abrir. |
+
+- **Testes:** `smoke_test.gd` confere a navegação, o volume aplicado ao barramento Master, a confirmação de reiniciar/sair e o Esc. `visual_check.gd` grava `31_menu_pausa` e `32_pausa_confirmar`.

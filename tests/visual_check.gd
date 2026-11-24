@@ -220,6 +220,15 @@ func _run() -> void:
     await _shot("30_casa_clareada", 6)
     game.monster_banished = false
     game.dawn = 0.0
+    # Menu de pausa: volume selecionado e a confirmacao de reiniciar.
+    game.status = "paused"
+    game.pause_index = game.PAUSE_VOLUME
+    await _shot("31_menu_pausa", 4)
+    game.pause_index = 1
+    game.pause_confirm = 1
+    await _shot("32_pausa_confirmar", 3)
+    game.pause_confirm = -1
+    game.status = "playing"
     game.set_physics_process(true)
     game._die()
     game.death_time = 0.45

@@ -379,5 +379,56 @@ func _run() -> void:
             push_error("Objetivo inacessivel: %s" % point)
             quit(1)
             return
-    print("AFRODITE SCARE: CENA, PROJECAO, CACHE, LANTERNA, MIRA, COLISAO, PAREDES ESPECTRAIS, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES E ROTAS OK")
+    # Menu de pausa: navegar, ajustar o volume, confirmar antes de reiniciar/sair.
+    var saved_volume: float = game.master_volume
+    game.status = "playing"
+    game._open_pause()
+    game._pause_key(KEY_DOWN)
+    game._pause_key(KEY_DOWN)
+    if game.status != "paused" or game.pause_index != game.PAUSE_VOLUME:
+        push_error("O menu de pausa deveria abrir e navegar ate o volume")
+        quit(1)
+        return
+    game.set_master_volume(0.5, false)
+    game._pause_key(KEY_LEFT)
+    var master_db: float = AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master"))
+    if absf(game.master_volume - 0.4) > 0.001 or absf(master_db - linear_to_db(0.4)) > 0.05:
+        push_error("O volume deveria cair para 40%% (agora %s / %s dB)" % [game.master_volume, master_db])
+        quit(1)
+        return
+    game.set_master_volume(saved_volume)
+    game._pause_key(KEY_DOWN)
+    game._pause_key(KEY_ENTER)
+    if game.status != "paused" or game.pause_confirm != 3:
+        push_error("Sair para o menu deveria pedir confirmacao")
+        quit(1)
+        return
+    game._pause_key(KEY_ESCAPE)
+    if game.status != "paused" or game.pause_confirm != -1:
+        push_error("ESC deveria cancelar a confirmacao sem fechar o menu")
+        quit(1)
+        return
+    game._pause_key(KEY_ENTER)
+    game._pause_key(KEY_ENTER)
+    if game.status != "menu":
+        push_error("Confirmar deveria voltar ao menu inicial")
+        quit(1)
+        return
+    game.status = "playing"
+    game._open_pause()
+    game._pause_select(1)
+    game._pause_key(KEY_ENTER)
+    game._pause_key(KEY_ENTER)
+    if not game.status in ["intro", "playing"] or game.collected_count() != 0:
+        push_error("Reiniciar pelo menu de pausa deveria comecar um jogo novo")
+        quit(1)
+        return
+    game.status = "playing"
+    game._open_pause()
+    game._pause_key(KEY_ESCAPE)
+    if game.status != "playing":
+        push_error("ESC no menu de pausa deveria voltar ao jogo")
+        quit(1)
+        return
+    print("AFRODITE SCARE: CENA, PROJECAO, CACHE, LANTERNA, MIRA, COLISAO, PAREDES ESPECTRAIS, ABERTURA, PULSOS, SILICONES, PAVOR, ASSOMBRACOES, ROTAS E MENU DE PAUSA OK")
     quit(0)

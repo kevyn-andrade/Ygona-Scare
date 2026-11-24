@@ -69,6 +69,15 @@ var previous_monster: Vector2 = Vector2.ZERO
 var draw_player: Vector2 = Vector2.ZERO
 var draw_monster: Vector2 = Vector2.ZERO
 var show_fps: bool = false
+
+# Menu de pausa: continuar, reiniciar, volume e menu inicial.
+const PAUSE_ITEMS: Array = ["CONTINUAR", "REINICIAR JOGO", "VOLUME", "MENU INICIAL"]
+const PAUSE_VOLUME: int = 2
+const SETTINGS_PATH: String = "user://ajustes.cfg"
+var pause_index: int = 0
+var pause_confirm: int = -1       # item que espera a segunda confirmacao (reiniciar / menu)
+var master_volume: float = 1.0    # 0..1, aplicado ao barramento Master e salvo em SETTINGS_PATH
+var dragging_volume: bool = false
 var direction: Vector2 = Vector2.RIGHT
 var look: Vector2 = Vector2.UP
 var monster: Vector2
@@ -203,6 +212,7 @@ func _ready() -> void:
 	_build_solids()
 	_reset_opening()
 	_initial_positions()
+	_load_settings()
 	music.start()
 	queue_redraw()
 
@@ -509,7 +519,15 @@ func notify(message: String, seconds: float = 3.2) -> void:
 	hint_timer = seconds
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed or event.echo:
+	if status == "paused" and event is InputEventMouse:
+		_pause_mouse(event)
+		return
+	if not (event is InputEventKey) or not event.pressed:
+		return
+	if status == "paused":
+		_pause_key(event.keycode)    # aceita repeticao: segurar ← → ajusta o volume
+		return
+	if event.echo:
 		return
 	var key = event.keycode
 	if status == "menu":
@@ -538,10 +556,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif key == KEY_ESCAPE:
 			status = "menu"
 		return
-	if key == KEY_ESCAPE:
-		status = "playing" if status == "paused" else "paused"
-		return
 	if status != "playing":
+		return
+	if key == KEY_ESCAPE:
+		_open_pause()
 		return
 	if key == KEY_F3:
 		show_fps = not show_fps
@@ -571,6 +589,121 @@ func _unhandled_input(event: InputEvent) -> void:
 		_throw_bottle()
 	elif key == KEY_H:
 		notify("SETAS ↑ ↓ ← → mover | MOUSE mirar | F espectral | ESPAÇO tirar/guardar lanterna | SHIFT correr | E interagir | Q distrair", 6.5)
+
+# --------------------------- MENU DE PAUSA ---------------------------------
+func _open_pause() -> void:
+	status = "paused"
+	pause_index = 0
+	pause_confirm = -1
+	dragging_volume = false
+	music.sfx("click", -12.0, 0.9)
+
+func _pause_key(key: int) -> void:
+	if key == KEY_ESCAPE:
+		if pause_confirm >= 0:
+			pause_confirm = -1          # desiste de reiniciar / sair
+		else:
+			status = "playing"
+		return
+	if key in [KEY_UP, KEY_W]:
+		_pause_select(pause_index - 1)
+	elif key in [KEY_DOWN, KEY_S]:
+		_pause_select(pause_index + 1)
+	elif key in [KEY_LEFT, KEY_A] and pause_index == PAUSE_VOLUME:
+		set_master_volume(master_volume - 0.1)
+	elif key in [KEY_RIGHT, KEY_D] and pause_index == PAUSE_VOLUME:
+		set_master_volume(master_volume + 0.1)
+	elif key in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_E]:
+		_pause_activate(pause_index)
+
+func _pause_select(index: int) -> void:
+	var wrapped: int = posmod(index, PAUSE_ITEMS.size())
+	if wrapped != pause_index:
+		pause_index = wrapped
+		pause_confirm = -1
+		music.sfx("click", -16.0, 1.4)
+
+func _pause_activate(index: int) -> void:
+	match index:
+		0:
+			status = "playing"
+		1, 3:
+			# Reiniciar e voltar ao menu perdem o progresso: pedem confirmacao.
+			if pause_confirm != index:
+				pause_confirm = index
+				music.sfx("click", -10.0, 0.7)
+				return
+			pause_confirm = -1
+			if index == 1:
+				_restart_entirely()
+			else:
+				status = "menu"
+		PAUSE_VOLUME:
+			# ENTER no volume alterna entre mudo e o volume cheio.
+			set_master_volume(0.0 if master_volume > 0.0 else 1.0)
+
+func _pause_mouse(event: InputEventMouse) -> void:
+	var at: Vector2 = event.position
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if not event.pressed:
+			if dragging_volume:
+				dragging_volume = false
+				_save_settings()
+			return
+		if _volume_bar_rect().grow(6.0).has_point(at):
+			pause_index = PAUSE_VOLUME
+			dragging_volume = true
+			_volume_from_mouse(at.x, false)
+			return
+		for i in range(PAUSE_ITEMS.size()):
+			if _pause_rect(i).has_point(at):
+				_pause_select(i)
+				_pause_activate(i)
+				return
+	elif event is InputEventMouseButton and event.pressed and pause_index == PAUSE_VOLUME:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			set_master_volume(master_volume + 0.05)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			set_master_volume(master_volume - 0.05)
+	elif event is InputEventMouseMotion:
+		if dragging_volume:
+			_volume_from_mouse(at.x, false)
+			return
+		for i in range(PAUSE_ITEMS.size()):
+			if _pause_rect(i).has_point(at):
+				_pause_select(i)
+
+func _volume_from_mouse(x: float, save: bool) -> void:
+	var bar: Rect2 = _volume_bar_rect()
+	set_master_volume(clampf((x - bar.position.x)/bar.size.x, 0.0, 1.0), save)
+
+func _pause_rect(i: int) -> Rect2:
+	return Rect2(WIDTH*0.5 - 210.0, 262.0 + float(i)*64.0, 420.0, 50.0)
+
+func _volume_bar_rect() -> Rect2:
+	var r: Rect2 = _pause_rect(PAUSE_VOLUME)
+	return Rect2(r.position.x + 150.0, r.position.y + 19.0, 200.0, 12.0)
+
+func set_master_volume(value: float, save: bool = true) -> void:
+	master_volume = clampf(snappedf(value, 0.01), 0.0, 1.0)
+	var bus: int = AudioServer.get_bus_index("Master")
+	AudioServer.set_bus_mute(bus, master_volume <= 0.001)
+	AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(master_volume, 0.001)))
+	if save:
+		_save_settings()
+
+func _load_settings() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	var volume: float = 1.0
+	if cfg.load(SETTINGS_PATH) == OK:
+		volume = float(cfg.get_value("audio", "volume", 1.0))
+	set_master_volume(volume, false)
+
+func _save_settings() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("audio", "volume", master_volume)
+	cfg.save(SETTINGS_PATH)
 
 func _physics_process(delta: float) -> void:
 	if status != "playing":
@@ -1567,7 +1700,7 @@ func _draw_hud() -> void:
 	if ghost_unlocked:
 		helper += "  |  F ESPECTRAL"
 	_world_txt(Vector2(26,HEIGHT-20),helper,11,Color("a6a8b8"))
-	if hint_timer > 0.0:
+	if hint_timer > 0.0 and status != "paused":
 		var message = hint
 		var max_width = minf(WIDTH-40.0, ThemeDB.fallback_font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,16).x+38.0)
 		draw_rect(Rect2((WIDTH-max_width)*0.5,HEIGHT-137,max_width,37),Color(0.08,0.07,0.12,0.92))
@@ -1606,6 +1739,39 @@ func _center_text(message: String, baseline_y: float, size: int,color: Color) ->
 	var width = ThemeDB.fallback_font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,size).x
 	_world_txt(Vector2((WIDTH-width)/2.0,baseline_y),message,size,color)
 
+func _draw_pause_menu() -> void:
+	_center_text("PAUSADO",205,57,Color("ead7c5"))
+	_center_text("A criatura espera do outro lado da porta...",240,16,Color("9295a8"))
+	var font: Font = ThemeDB.fallback_font
+	for i in range(PAUSE_ITEMS.size()):
+		var r: Rect2 = _pause_rect(i)
+		var chosen: bool = i == pause_index
+		var asking: bool = i == pause_confirm
+		var fill: Color = Color("5d4056") if chosen else Color(0.10,0.09,0.14,0.92)
+		if asking:
+			fill = Color("6e2a36")
+		draw_rect(r,fill)
+		draw_rect(r,Color("b59ab0") if chosen else Color("4b4458"),false,1.0)
+		var label: String = str(PAUSE_ITEMS[i])
+		if asking:
+			label = ("REINICIAR? " if i == 1 else "SAIR PARA O MENU? ") + "ENTER CONFIRMA"
+		var text_col: Color = Color("fff2e5") if chosen else Color("bdb4c6")
+		if i == PAUSE_VOLUME:
+			_world_txt(r.position+Vector2(24,32),label,19,text_col)
+			var bar: Rect2 = _volume_bar_rect()
+			_draw_bar(bar.position,bar.size.x,bar.size.y,master_volume,Color("c9a0d6") if chosen else Color("8a7a96"))
+			var knob: Vector2 = Vector2(bar.position.x+bar.size.x*master_volume,bar.get_center().y)
+			draw_circle(knob,7.0 if chosen else 5.5,Color("fff2e5") if chosen else Color("bdb4c6"))
+			var pct: String = "MUDO" if master_volume <= 0.001 else "%d%%" % int(round(master_volume*100.0))
+			_world_txt(Vector2(bar.end.x+14.0,r.position.y+32.0),pct,15,text_col)
+		else:
+			var tw: float = font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,19).x
+			_world_txt(Vector2(r.get_center().x-tw*0.5,r.position.y+32.0),label,19,text_col)
+	var help: String = "↑ ↓ ESCOLHER  •  ENTER CONFIRMAR  •  ← → VOLUME  •  ESC VOLTAR AO JOGO"
+	if pause_confirm >= 0:
+		help = "ENTER DE NOVO PARA CONFIRMAR  •  ESC CANCELA"
+	_center_text(help,560,14,Color("8e93a5"))
+
 func _draw_overlay() -> void:
 	draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.02,0.025,0.045,0.86))
 	if status == "menu":
@@ -1626,9 +1792,7 @@ func _draw_overlay() -> void:
 		_center_text("E INTERAGIR  •  SHIFT CORRER  •  Q DISTRAIR  •  H AJUDA  •  F3 FPS",586,14,Color("8e93a5"))
 		_center_text("VISTA ISOMÉTRICA 45°  •  GODOT 4.7  •  ÁUDIO ORIGINAL",676,13,Color("7e8292"))
 	elif status == "paused":
-		_center_text("PAUSADO",290,57,Color("ead7c5"))
-		_center_text("ESC para continuar",342,24,Color("cfc6db"))
-		_center_text("A criatura espera do outro lado da porta...",391,18,Color("9295a8"))
+		_draw_pause_menu()
 	elif status == "dead":
 		_entity_face(Vector2(WIDTH/2,170),0.62,Color("ef6374"),0.25)
 		draw_rect(Rect2(0,0,WIDTH,HEIGHT),Color(0.02,0.0,0.01,0.55))
